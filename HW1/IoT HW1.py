@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # ================================================================
 # Activity Recognition with Accelerometer Data
-# Group 1 Members: Nisa Defne Aksu, Barkın Var, Pelin Karadal, Şahd Şerif
+# Group 1 Members: Nisa Defne Aksu, Barkın Var, Pelin Karadal, Shahd Şerif
 # ================================================================
 
 import pandas as pd
@@ -54,44 +54,67 @@ def plot_activities():
 # ================================================================
 # PART 2: Step Counting (from Walking Data) with Manual Sliding Window
 # ================================================================
-def count_steps(filename="walking.csv"):
+
+'''
+Compute acceleration magnitude: Combines the three axes (x, y, z) into a single signal.
+Remove gravity offset: Centers the signal around zero to focus on movement, not static gravity (~9.8 m/s²).
+Sliding window smoothing: Uses a small window (window_size=5) to smooth sudden noise spikes.
+Peak detection:
+- Adaptive threshold: only consider peaks above std(smooth) * 1.0.
+- Local maximum check: ensure the point is higher than neighbors.
+- min_gap: ignore peaks that are too close (avoids double-counting rapid fluctuations).
+'''
+
+'''
+def count_steps(filename):
     df = load_data(filename)
     if df is None:
         return
 
+    # Extract time and acceleration columns
     t = df["Time (s)"].values
     ax = df["Acceleration x (m/s^2)"].values
     ay = df["Acceleration y (m/s^2)"].values
     az = df["Acceleration z (m/s^2)"].values
 
-    # Compute absolute acceleration
-    acc_abs = np.sqrt(ax**2 + ay**2 + az**2)
+    # Compute magnitude of acceleration
+    acc_mag = np.sqrt(ax**2 + ay**2 + az**2)
 
-    # Remove gravity offset
-    acc_no_g = acc_abs - np.mean(acc_abs)
+    # Remove gravity (center signal)
+    acc_centered = acc_mag - np.mean(acc_mag)
 
-    # Manual sliding window for smoothing
-    window_size = 5
+    # --- Step 1: Manual Sliding Window Smoothing ---
+    window_size = 5  # adjust based on sampling rate
     smooth = []
-    for i in range(len(acc_no_g)):
-        start = max(0, i - window_size//2)
-        end = min(len(acc_no_g), i + window_size//2 + 1)
-        smooth.append(np.mean(acc_no_g[start:end]))
+    for i in range(len(acc_centered)):
+        start = max(0, i - window_size // 2)
+        end = min(len(acc_centered), i + window_size // 2 + 1)
+        window_avg = np.mean(acc_centered[start:end])
+        smooth.append(window_avg)
     smooth = np.array(smooth)
 
-    # Threshold-based peak detection (manual implementation)
-    threshold = smooth.std() * 1.0
+    # --- Step 2: Manual Peak Detection ---
+    threshold = np.std(smooth) * 1.0  # adaptive threshold
+    min_gap = 25                      # ignore peaks too close together
     peaks = []
-    for i in range(1, len(smooth)-1):
-        if smooth[i] > threshold and smooth[i] > smooth[i-1] and smooth[i] > smooth[i+1]:
+    last_peak = -min_gap
+
+    for i in range(1, len(smooth) - 1):
+        if (
+            smooth[i] > threshold
+            and smooth[i] > smooth[i - 1]
+            and smooth[i] > smooth[i + 1]
+            and (i - last_peak) > min_gap
+        ):
             peaks.append(i)
+            last_peak = i
 
     step_count = len(peaks)
     print(f"Estimated step count from {filename}: {step_count}")
 
-    # Plot with detected steps
+    # --- Step 3: Visualization (for report) ---
     plt.figure(figsize=(10, 5))
-    plt.plot(t, smooth, label="Filtered Acceleration")
+    plt.plot(t, smooth, label="Smoothed Acceleration", linewidth=1)
     plt.plot(t[peaks], smooth[peaks], "ro", label="Detected Steps")
     plt.title(f"Step Detection from {filename}")
     plt.xlabel("Time (s)")
@@ -100,6 +123,60 @@ def count_steps(filename="walking.csv"):
     plt.grid(True)
     plt.tight_layout()
     plt.show()
+
+    return step_count'''
+
+'''
+Compute acceleration magnitude: Combines the three axes (x, y, z) into a single signal.
+Remove gravity offset: Centers the signal around zero to focus on movement, not static gravity (~9.8 m/s²).
+Sliding window smoothing: Uses a small window (window_size=5) to smooth sudden noise spikes.
+Binary thresholding: Converts acceleration to 0 (below threshold) or 1 (above threshold).
+Positive flank detection: Finds points where the signal crosses threshold from 0 → 1 (like “step starts”).
+'''
+
+def count_steps(filename, threshold_factor=1.0, window_size=5):
+    df = pd.read_csv(filename)
+    ax, ay, az = df["Acceleration x (m/s^2)"], df["Acceleration y (m/s^2)"], df["Acceleration z (m/s^2)"]
+    t = df["Time (s)"].values
+
+    # --- 1. Compute magnitude ---
+    acc = np.sqrt(ax**2 + ay**2 + az**2)
+    acc_centered = acc - np.mean(acc)
+
+    # --- 2. Manual sliding window smoothing ---
+    smooth = []
+    for i in range(len(acc_centered)):
+        start = max(0, i - window_size // 2)
+        end = min(len(acc_centered), i + window_size // 2 + 1)
+        smooth.append(np.mean(acc_centered[start:end]))
+    smooth = np.array(smooth)
+
+    # --- 3. Sign thresholding ---
+    a0 = threshold_factor * np.std(smooth)
+    binary = np.where(smooth > a0, 1, 0)
+
+    # --- 4. Differentiate binary signal to find positive flanks (0→1 transitions) ---
+    diff = np.diff(binary)
+    peaks = np.where(diff == 1)[0]
+
+    step_count = len(peaks)
+    print(f"Estimated steps in {filename}: {step_count}")
+
+    # --- 5. Plot for visualization (optional) ---
+    plt.figure(figsize=(10,5))
+    plt.plot(t, smooth, label="Smoothed acceleration")
+    plt.axhline(y=a0, color='r', linestyle='--', label=f"Threshold ({a0:.2f})")
+    plt.plot(t[peaks], smooth[peaks], "go", label="Detected steps")
+    plt.xlabel("Time (s)")
+    plt.ylabel("Acceleration (m/s²)")
+    plt.title("Step detection")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+    return step_count
+
 
 # ================================================================
 # PART 3: Pose Estimation for All 4 Activities (Accelerometer + Gyroscope)
@@ -206,5 +283,4 @@ if __name__ == "__main__":
 
     print("\n=== Part 3: Pose Estimation for All Activities ===")
     estimate_pose_all()
-
-
+    
