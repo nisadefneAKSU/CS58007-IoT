@@ -134,42 +134,58 @@ Binary thresholding: Converts acceleration to 0 (below threshold) or 1 (above th
 Positive flank detection: Finds points where the signal crosses threshold from 0 → 1 (like “step starts”).
 '''
 
-def count_steps(filename, threshold_factor=1.0, window_size=5):
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+def count_steps(filename, alpha=0.995, threshold_factor=0.6, window_size=30, min_step_interval=0.25):
     df = pd.read_csv(filename)
     ax, ay, az = df["Acceleration x (m/s^2)"], df["Acceleration y (m/s^2)"], df["Acceleration z (m/s^2)"]
     t = df["Time (s)"].values
 
-    # --- 1. Compute magnitude ---
-    acc = np.sqrt(ax**2 + ay**2 + az**2)
-    acc_centered = acc - np.mean(acc)
+    # --- 1. Raw acceleration magnitude ---
+    acc_mag = np.sqrt(ax**2 + ay**2 + az**2)
 
-    # --- 2. Manual sliding window smoothing ---
+    # --- 2. Low-pass filter to estimate gravity ---
+    gravity = np.zeros_like(acc_mag)
+    gravity[0] = acc_mag[0]
+    for i in range(1, len(acc_mag)):
+        gravity[i] = alpha * gravity[i-1] + (1 - alpha) * acc_mag[i]
+
+    # --- 3. High-pass filter to remove gravity (motion only) ---
+    acc = acc_mag - gravity
+
+    # --- 4. Manual smoothing (moving average) ---
     smooth = []
-    for i in range(len(acc_centered)):
+    for i in range(len(acc)):
         start = max(0, i - window_size // 2)
-        end = min(len(acc_centered), i + window_size // 2 + 1)
-        smooth.append(np.mean(acc_centered[start:end]))
+        end = min(len(acc), i + window_size // 2 + 1)
+        smooth.append(np.mean(acc[start:end]))
     smooth = np.array(smooth)
 
-    # --- 3. Sign thresholding ---
+    # --- 5. Peak detection for step counting ---
+    peaks = []
     a0 = threshold_factor * np.std(smooth)
-    binary = np.where(smooth > a0, 1, 0)
-
-    # --- 4. Differentiate binary signal to find positive flanks (0→1 transitions) ---
-    diff = np.diff(binary)
-    peaks = np.where(diff == 1)[0]
+    last_peak_idx = -int(min_step_interval / np.mean(np.diff(t)))  # enforce min interval
+    for i in range(1, len(smooth) - 1):
+        if smooth[i] > a0 and smooth[i] > smooth[i - 1] and smooth[i] > smooth[i + 1]:
+            if i - last_peak_idx >= int(min_step_interval / np.mean(np.diff(t))):
+                peaks.append(i)
+                last_peak_idx = i
 
     step_count = len(peaks)
     print(f"Estimated steps in {filename}: {step_count}")
 
-    # --- 5. Plot for visualization (optional) ---
-    plt.figure(figsize=(10,5))
-    plt.plot(t, smooth, label="Smoothed acceleration")
-    plt.axhline(y=a0, color='r', linestyle='--', label=f"Threshold ({a0:.2f})")
-    plt.plot(t[peaks], smooth[peaks], "go", label="Detected steps")
+    # --- 6. Plot for visualization ---
+    plt.figure(figsize=(12, 6))
+    plt.plot(t, acc_mag, label="Raw Acceleration Magnitude", color='gray', alpha=0.4)
+    plt.plot(t, smooth, label="Smoothed (Motion Only)", color='blue')
+    plt.axhline(y=a0, color='red', linestyle='--', label=f"Threshold = {a0:.2f}")
+    plt.plot(t[peaks], smooth[peaks], 'go', label="Detected Steps")
+
     plt.xlabel("Time (s)")
     plt.ylabel("Acceleration (m/s²)")
-    plt.title("Step detection")
+    plt.title("Step Detection with Gravity Removal and Smoothing")
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
@@ -275,7 +291,7 @@ def estimate_pose_all():
 if __name__ == "__main__":
 
     print("=== Part 1: Activity Visualization & Feature Inspection ===")
-    plot_activities()
+    #plot_activities()
 
     print("\n=== Part 2: Step Counting ===")
     filename = input("Enter the walking data filename (e.g., walking.csv): ")
