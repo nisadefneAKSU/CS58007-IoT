@@ -134,10 +134,6 @@ Binary thresholding: Converts acceleration to 0 (below threshold) or 1 (above th
 Positive flank detection: Finds points where the signal crosses threshold from 0 → 1 (like “step starts”).
 '''
 
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-
 def count_steps(filename, alpha=0.995, threshold_factor=0.6, window_size=30, min_step_interval=0.25):
     df = pd.read_csv(filename)
     ax, ay, az = df["Acceleration x (m/s^2)"], df["Acceleration y (m/s^2)"], df["Acceleration z (m/s^2)"]
@@ -291,7 +287,7 @@ def estimate_pose_all():
 if __name__ == "__main__":
 
     print("=== Part 1: Activity Visualization & Feature Inspection ===")
-    #plot_activities()
+    plot_activities()
 
     print("\n=== Part 2: Step Counting ===")
     filename = input("Enter the walking data filename (e.g., walking.csv): ")
