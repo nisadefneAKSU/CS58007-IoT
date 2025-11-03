@@ -7,6 +7,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import precision_score, recall_score, f1_score
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import cross_val_score
+from collections import defaultdict
+from pathlib import Path
 
 '''Part 1:
 Implement KNN classifiers both for aggregate data and individual data
@@ -39,12 +41,21 @@ def find_best_k(X_train, y_train, k_values=range(1, 21)):
 # Load the UCI HAR dataset (Aggregate level)
 # ---------------------------------------------------------------
 def load_har_dataset(base_path):
+    """
     X_train = np.loadtxt(os.path.join(base_path, "train", "X_train.txt"))
     y_train = np.loadtxt(os.path.join(base_path, "train", "y_train.txt")).astype(int)
     X_test = np.loadtxt(os.path.join(base_path, "test", "X_test.txt"))
     y_test = np.loadtxt(os.path.join(base_path, "test", "y_test.txt")).astype(int)
 
     return X_train, X_test, y_train, y_test
+    """
+    X_train = np.loadtxt(base_path / "train" / "X_train.txt")
+    y_train = np.loadtxt(base_path / "train" / "y_train.txt").astype(int)
+    X_test = np.loadtxt(base_path / "test" / "X_test.txt")
+    y_test = np.loadtxt(base_path / "test" / "y_test.txt").astype(int)
+    
+    return X_train, X_test, y_train, y_test
+
 
 # ---------------------------------------------------------------
 # Train and evaluate KNNs (Aggregate level)
@@ -100,6 +111,63 @@ def load_har_user_dataset(base_path):
 
     return df
 
+
+
+# This part is to calculate precision, recall, and f1 scores manually
+def compute_weighted_metrics(y_true, y_pred): # we get the true labels and predicted labels as input
+    
+    labels = sorted(set(y_true)) # this is all unique class labels
+    metrics = defaultdict(dict) # dictionary to store metrics for each class
+    # each key maps to another dictionary by default, that's why we use defaultdict (no key errors :))
+    support_total = 0 #total number of smaples
+    weighted_precision = 0
+    weighted_recall = 0
+    weighted_f1 = 0
+
+    for label in labels: # fore each class (sitting, walking,...) we compute
+        
+        # true positives aka correctly predicted class
+        TP = sum((yt == label and yp == label) for yt, yp in zip(y_true, y_pred))
+
+        # false positives aka predicted this class, actually another class
+        FP = sum((yt != label and yp == label) for yt, yp in zip(y_true, y_pred))
+
+        # false negatives aka predicted as another class but actually this class
+        FN = sum((yt == label and yp != label) for yt, yp in zip(y_true, y_pred))
+
+        # to see how many true samples belong to this class
+        support = sum(yt == label for yt in y_true)
+
+
+        # implementing the formulas here (also considering division by 0)
+        precision = TP / (TP + FP) if (TP + FP) > 0 else 0 # actual positives out of all posştives
+        recall = TP / (TP + FN) if (TP + FN) > 0 else 0 # actual positives out of trufly classifed positives and falsely classified negatives
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+
+
+        # we store them like this, saving per class
+        metrics[label] = {
+            "support": support,
+            "precision": precision,
+            "recall": recall,
+            "f1": f1
+        }
+
+        # here we multiply each score with support (which is the weight basically) and add to total
+        support_total += support
+        weighted_precision += support * precision
+        weighted_recall += support * recall
+        weighted_f1 += support * f1
+
+    # and we divide by total support to get the weighted scores
+    weighted_precision /= support_total
+    weighted_recall /= support_total
+    weighted_f1 /= support_total
+
+    return weighted_precision, weighted_recall, weighted_f1, metrics
+
+
+
 # ======================================================
 # Train and evaluate user-specific KNNs
 # ======================================================
@@ -110,6 +178,8 @@ def run_knn_per_user(df, k=5):
     print(f"\nTotal users: {len(users)}\n")
 
     user_metrics = []
+
+    print("Printing both sklearn built-in metrics and manual calculation metrics for comparison. \n")
 
     for user in users:
         print(f"--- User {user} ---")
@@ -134,8 +204,15 @@ def run_knn_per_user(df, k=5):
         recall = recall_score(y_test, y_pred, average="weighted", zero_division=0)
         f1 = f1_score(y_test, y_pred, average="weighted", zero_division=0)
 
-        print(f"Precision: {precision:.3f}, Recall: {recall:.3f}, F1: {f1:.3f}\n")
-        user_metrics.append((user, precision, recall, f1))
+        # manual metrics
+        manual_precision, manual_recall, manual_f1, _ = compute_weighted_metrics(y_test, y_pred)
+
+        
+        print(f"SKLEARN -> Precision: {precision:.3f}, Recall: {recall:.3f}, F1: {f1:.3f}")
+        print(f"MANUAL  -> Precision: {manual_precision:.3f}, Recall: {manual_recall:.3f}, F1: {manual_f1:.3f}\n")
+        
+
+        user_metrics.append((user, manual_precision, manual_recall, manual_f1))
 
     # Summary
     metrics_df = pd.DataFrame(user_metrics, columns=["User", "Precision", "Recall", "F1"])
@@ -192,7 +269,9 @@ def xor(x):
 # ---------------------------------------------------------------
 if __name__ == "__main__":
     # Path to UCI HAR Dataset folder
-    base_path = "./UCI HAR Dataset"
+    #base_path = "./UCI HAR Dataset"
+    base_path = Path("./UCI HAR Dataset")
+
     
     print("\n===Part 1===\n")
 
