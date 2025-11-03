@@ -80,95 +80,128 @@ weighted avg     0.9106    0.9060    0.9050      2947
 
 Total users: 30
 
+Printing both sklearn built-in metrics and manual calculation metrics for comparison.
+
 --- User 1 ---
-Precision: 1.000, Recall: 1.000, F1: 1.000
+SKLEARN -> Precision: 1.000, Recall: 1.000, F1: 1.000
+MANUAL  -> Precision: 1.000, Recall: 1.000, F1: 1.000
 
 --- User 2 ---
-Precision: 0.970, Recall: 0.967, F1: 0.967
+SKLEARN -> Precision: 0.970, Recall: 0.967, F1: 0.967
+MANUAL  -> Precision: 0.970, Recall: 0.967, F1: 0.967
 
 --- User 3 ---
-Precision: 0.962, Recall: 0.957, F1: 0.956
+SKLEARN -> Precision: 0.962, Recall: 0.957, F1: 0.956
+MANUAL  -> Precision: 0.962, Recall: 0.957, F1: 0.956
 
 --- User 4 ---
-Precision: 0.946, Recall: 0.922, F1: 0.916
+SKLEARN -> Precision: 0.946, Recall: 0.922, F1: 0.916
+MANUAL  -> Precision: 0.946, Recall: 0.922, F1: 0.916
 
 --- User 5 ---
-Precision: 0.952, Recall: 0.951, F1: 0.950
+SKLEARN -> Precision: 0.952, Recall: 0.951, F1: 0.950
+MANUAL  -> Precision: 0.952, Recall: 0.951, F1: 0.950
 
 --- User 6 ---
-Precision: 0.955, Recall: 0.938, F1: 0.936
+SKLEARN -> Precision: 0.955, Recall: 0.938, F1: 0.936
+MANUAL  -> Precision: 0.955, Recall: 0.938, F1: 0.936
 
 --- User 7 ---
-Precision: 0.973, Recall: 0.968, F1: 0.967
+SKLEARN -> Precision: 0.973, Recall: 0.968, F1: 0.967
+MANUAL  -> Precision: 0.973, Recall: 0.968, F1: 0.967
 
 --- User 8 ---
-Precision: 1.000, Recall: 1.000, F1: 1.000
+SKLEARN -> Precision: 1.000, Recall: 1.000, F1: 1.000
+MANUAL  -> Precision: 1.000, Recall: 1.000, F1: 1.000
 
 --- User 9 ---
-Precision: 0.934, Recall: 0.931, F1: 0.930
+SKLEARN -> Precision: 0.934, Recall: 0.931, F1: 0.930
+MANUAL  -> Precision: 0.934, Recall: 0.931, F1: 0.930
 
 --- User 10 ---
-Precision: 1.000, Recall: 1.000, F1: 1.000
+SKLEARN -> Precision: 1.000, Recall: 1.000, F1: 1.000
+MANUAL  -> Precision: 1.000, Recall: 1.000, F1: 1.000
 
 --- User 11 ---
-Precision: 0.974, Recall: 0.969, F1: 0.969
+SKLEARN -> Precision: 0.974, Recall: 0.969, F1: 0.969
+MANUAL  -> Precision: 0.974, Recall: 0.969, F1: 0.969
 
 --- User 12 ---
-Precision: 0.986, Recall: 0.984, F1: 0.984
+SKLEARN -> Precision: 0.986, Recall: 0.984, F1: 0.984
+MANUAL  -> Precision: 0.986, Recall: 0.984, F1: 0.984
 
 --- User 13 ---
-Precision: 0.986, Recall: 0.985, F1: 0.985
+SKLEARN -> Precision: 0.986, Recall: 0.985, F1: 0.985
+MANUAL  -> Precision: 0.986, Recall: 0.985, F1: 0.985
 
 --- User 14 ---
-Precision: 0.947, Recall: 0.938, F1: 0.938
+SKLEARN -> Precision: 0.947, Recall: 0.938, F1: 0.938
+MANUAL  -> Precision: 0.947, Recall: 0.938, F1: 0.938
 
 --- User 15 ---
-Precision: 0.986, Recall: 0.985, F1: 0.985
+SKLEARN -> Precision: 0.986, Recall: 0.985, F1: 0.985
+MANUAL  -> Precision: 0.986, Recall: 0.985, F1: 0.985
 
 --- User 16 ---
-Precision: 0.941, Recall: 0.919, F1: 0.914
+SKLEARN -> Precision: 0.941, Recall: 0.919, F1: 0.914
+MANUAL  -> Precision: 0.941, Recall: 0.919, F1: 0.914
 
 --- User 17 ---
-Precision: 0.976, Recall: 0.973, F1: 0.973
+SKLEARN -> Precision: 0.976, Recall: 0.973, F1: 0.973
+MANUAL  -> Precision: 0.976, Recall: 0.973, F1: 0.973
 
 --- User 18 ---
-Precision: 0.960, Recall: 0.959, F1: 0.959
+SKLEARN -> Precision: 0.960, Recall: 0.959, F1: 0.959
+MANUAL  -> Precision: 0.960, Recall: 0.959, F1: 0.959
 
 --- User 19 ---
-Precision: 0.987, Recall: 0.986, F1: 0.986
+SKLEARN -> Precision: 0.987, Recall: 0.986, F1: 0.986
+MANUAL  -> Precision: 0.987, Recall: 0.986, F1: 0.986
 
 --- User 20 ---
-Precision: 0.987, Recall: 0.986, F1: 0.986
+SKLEARN -> Precision: 0.987, Recall: 0.986, F1: 0.986
+MANUAL  -> Precision: 0.987, Recall: 0.986, F1: 0.986
 
 --- User 21 ---
-Precision: 0.964, Recall: 0.963, F1: 0.963
+SKLEARN -> Precision: 0.964, Recall: 0.963, F1: 0.963
+MANUAL  -> Precision: 0.964, Recall: 0.963, F1: 0.963
 
 --- User 22 ---
-Precision: 0.986, Recall: 0.985, F1: 0.985
+SKLEARN -> Precision: 0.986, Recall: 0.985, F1: 0.985
+MANUAL  -> Precision: 0.986, Recall: 0.985, F1: 0.985
 
 --- User 23 ---
-Precision: 0.977, Recall: 0.973, F1: 0.973
+SKLEARN -> Precision: 0.977, Recall: 0.973, F1: 0.973
+MANUAL  -> Precision: 0.977, Recall: 0.973, F1: 0.973
 
 --- User 24 ---
-Precision: 0.988, Recall: 0.987, F1: 0.987
+SKLEARN -> Precision: 0.988, Recall: 0.987, F1: 0.987
+MANUAL  -> Precision: 0.988, Recall: 0.987, F1: 0.987
 
 --- User 25 ---
-Precision: 0.952, Recall: 0.951, F1: 0.951
+SKLEARN -> Precision: 0.952, Recall: 0.951, F1: 0.951
+MANUAL  -> Precision: 0.952, Recall: 0.951, F1: 0.951
 
 --- User 26 ---
-Precision: 0.975, Recall: 0.975, F1: 0.975
+SKLEARN -> Precision: 0.975, Recall: 0.975, F1: 0.975
+MANUAL  -> Precision: 0.975, Recall: 0.975, F1: 0.975
 
 --- User 27 ---
-Precision: 0.988, Recall: 0.987, F1: 0.987
+SKLEARN -> Precision: 0.988, Recall: 0.987, F1: 0.987
+MANUAL  -> Precision: 0.988, Recall: 0.987, F1: 0.987
 
 --- User 28 ---
-Precision: 0.924, Recall: 0.922, F1: 0.922
+SKLEARN -> Precision: 0.924, Recall: 0.922, F1: 0.922
+MANUAL  -> Precision: 0.924, Recall: 0.922, F1: 0.922
 
 --- User 29 ---
-Precision: 0.975, Recall: 0.971, F1: 0.971
+SKLEARN -> Precision: 0.975, Recall: 0.971, F1: 0.971
+MANUAL  -> Precision: 0.975, Recall: 0.971, F1: 0.971
 
 --- User 30 ---
-Precision: 0.977, Recall: 0.974, F1: 0.974
+SKLEARN -> Precision: 0.977, Recall: 0.974, F1: 0.974
+MANUAL  -> Precision: 0.977, Recall: 0.974, F1: 0.974
+
 
 === Summary (F1 per user) ===
     User  Precision    Recall        F1
