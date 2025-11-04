@@ -6,6 +6,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.model_selection import cross_val_score
 from collections import defaultdict
 from pathlib import Path
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv1D, MaxPooling1D, Flatten, Dense, Dropout
 
 '''
 Part 1:
@@ -225,7 +228,214 @@ Train a deep neural network using the raw data. Train both an aggregate model an
 Hint: Segmentation now refers to how you build the frames that you feed into your model
 Compute precision, recall, and F1'''
 
+### Helper function to load raw signal files from the 'Inertial Signals' folder
+def load_raw_data_files(split, base_path):
+    """
+    Loads the 9 raw signal files (body_acc, body_gyro, total_acc) for a given
+    split ('train' or 'test') and stacks them into a single 3D numpy array.
+    
+    Output shape: (num_samples, 128_timesteps, 9_channels)
+    """
+    signals = []
+    signal_names = [
+        'body_acc_x', 'body_acc_y', 'body_acc_z',
+        'body_gyro_x', 'body_gyro_y', 'body_gyro_z',
+        'total_acc_x', 'total_acc_y', 'total_acc_z'
+    ]
+    
+    for sig in signal_names:
+        filename = base_path / split / "Inertial Signals" / f"{sig}_{split}.txt"
+        signals.append(np.loadtxt(filename))
+    
+    # Stack along the third dimension (channels)
+    # np.dstack stacks arrays along the third axis (depth)
+    return np.dstack(signals)
 
+### Load the raw UCI HAR dataset (Part 2 - Raw Data)
+def load_har_raw_dataset(base_path):
+    """
+    Loads raw data for aggregate model.
+    Converts labels from 1-6 to 0-5 for Keras/TensorFlow.
+    """
+    X_train = load_raw_data_files("train", base_path)
+    X_test = load_raw_data_files("test", base_path)
+    
+    y_train = np.loadtxt(base_path / "train" / "y_train.txt").astype(int)
+    y_test = np.loadtxt(base_path / "test" / "y_test.txt").astype(int)
+    
+    # IMPORTANT: Labels are 1-6. Convert to 0-5 for Keras
+    # (which expects 0-indexed classes for sparse_categorical_crossentropy)
+    y_train = y_train - 1
+    y_test = y_test - 1
+    
+    return X_train, X_test, y_train, y_test
+
+### Load raw user-specific HAR data (Part 2 - Raw Data)
+def load_har_raw_user_dataset(base_path):
+    """
+    Loads and merges train/test raw data and subjects for user-specific models.
+    Converts labels from 1-6 to 0-5.
+    """
+    X_train = load_raw_data_files("train", base_path)
+    X_test = load_raw_data_files("test", base_path)
+    
+    y_train = np.loadtxt(base_path / "train" / "y_train.txt").astype(int) - 1 # 0-5
+    y_test = np.loadtxt(base_path / "test" / "y_test.txt").astype(int) - 1 # 0-5
+    
+    subject_train = np.loadtxt(base_path / "train" / "subject_train.txt").astype(int)
+    subject_test = np.loadtxt(base_path / "test" / "subject_test.txt").astype(int)
+    
+    # Concatenate train and test
+    X_all = np.concatenate((X_train, X_test), axis=0)
+    y_all = np.concatenate((y_train, y_test), axis=0)
+    subject_all = np.concatenate((subject_train, subject_test), axis=0)
+    
+    return X_all, y_all, subject_all
+
+### Build a 1D Convolutional Neural Network (CNN) model
+def build_cnn_model(input_shape=(128, 9), n_classes=6):
+    """
+    Builds a simple 1D-CNN model using Keras.
+    input_shape = (timesteps, channels)
+    n_classes = number of output activities
+    """
+    model = Sequential([
+        # 1st Conv block
+        Conv1D(filters=64, kernel_size=3, activation='relu', input_shape=input_shape),
+        # 2nd Conv block
+        Conv1D(filters=64, kernel_size=3, activation='relu'),
+        # 1D Max Pooling
+        MaxPooling1D(pool_size=2),
+        # Dropout for regularization
+        Dropout(0.5),
+        # Flatten to feed into a dense layer
+        Flatten(),
+        # Fully connected layer
+        Dense(100, activation='relu'),
+        # Output layer (softmax for multi-class classification)
+        Dense(n_classes, activation='softmax')
+    ])
+    
+    # Compile the model
+    model.compile(
+        optimizer='adam',
+        loss='sparse_categorical_crossentropy', # Use this loss because our y labels are integers (0-5)
+        metrics=['accuracy']
+    )
+    return model
+
+### Train and evaluate 1D-CNN for aggregate data
+def dnn_for_aggregate_data(base_path, epochs=10, batch_size=32):
+    print("\n=== 1D-CNN Classifier For Aggregate Raw Data ===")
+    X_train, X_test, y_train, y_test = load_har_raw_dataset(base_path)
+    print(f"Train: {X_train.shape}, Test: {X_test.shape}")
+
+    n_classes = len(np.unique(y_train)) # Should be 6 (0-5)
+    input_shape = X_train.shape[1:]     # Should be (128, 9)
+    
+    model = build_cnn_model(input_shape, n_classes)
+    print("\nModel Summary:")
+    model.summary()
+    
+    print(f"\nTraining 1D-CNN for {epochs} epochs...")
+    # Train the model, holding out 20% of training data for validation
+    model.fit(
+        X_train, y_train,
+        epochs=epochs,
+        batch_size=batch_size,
+        validation_split=0.2,
+        verbose=1 # Show progress bar
+    )
+    
+    print("\nEvaluating on test set...")
+    # Get probabilities for each class
+    y_pred_probs = model.predict(X_test)
+    # Get the class with the highest probability
+    y_pred = np.argmax(y_pred_probs, axis=1) 
+    
+    # We can reuse our manual metric function!
+    # Note: y_test and y_pred are both 0-5
+    precision, recall, f1, metrics = compute_weighted_metrics(y_test, y_pred)
+    
+    print("\n=== Manual Evaluation Metrics (Aggregate DNN) ===")
+    print(f"Precision (weighted): {precision:.3f}")
+    print(f"Recall (weighted):    {recall:.3f}")
+    print(f"F1-score (weighted):  {f1:.3f}")
+
+    # Print the confusion matrix
+    labels = sorted(set(y_test))
+    cm = np.zeros((len(labels), len(labels)), dtype=int)
+    for yt, yp in zip(y_test, y_pred):
+        cm[yt][yp] += 1 # y_test and y_pred are 0-5, so we can use them directly as indices
+    
+    print("\nConfusion Matrix (Labels 0-5):")
+    print(pd.DataFrame(cm, index=labels, columns=labels))
+    return
+
+### Train and evaluate user-specific 1D-CNN models
+def dnn_per_user(base_path, epochs=5, batch_size=32):
+    print("\n=== Running Individual User-Specific 1D-CNN Classifiers ===")
+    X_all, y_all, subject_all = load_har_raw_user_dataset(base_path)
+    
+    users = sorted(np.unique(subject_all))
+    n_classes = 6 # Fixed for this problem (0-5)
+    input_shape = (128, 9) # Fixed
+    
+    print(f"Total users: {len(users)}\n")
+    user_metrics = []
+
+    for user in users:
+        print(f"--- User {user} ---")
+        user_mask = (subject_all == user)
+        X_user = X_all[user_mask]
+        y_user = y_all[user_mask] # Already 0-5
+        
+        # Need enough samples to create a train/test split
+        if len(X_user) < 20: 
+            print(f"Skipping user {user} (too few samples).")
+            continue
+
+        try:
+            # Create a train/test split for this user's data
+            X_train, X_test, y_train, y_test = train_test_split(
+                X_user, y_user, test_size=0.2, stratify=y_user, random_state=42
+            )
+        except ValueError:
+            # This can happen if a user has < 2 samples for one activity class
+            print(f"Stratification failed for user {user} (too few samples of one class). Splitting without stratification.")
+            X_train, X_test, y_train, y_test = train_test_split(
+                X_user, y_user, test_size=0.2, random_state=42
+            )
+
+        # Build a new, untrained model for this user
+        model = build_cnn_model(input_shape, n_classes)
+        
+        # Train with fewer epochs for smaller, user-specific data
+        print(f"Training 1D-CNN for user {user} ({len(X_train)} samples)...")
+        model.fit(
+            X_train, y_train,
+            epochs=epochs,
+            batch_size=batch_size,
+            validation_data=(X_test, y_test), # Use test set as val set
+            verbose=0 # Quieter output inside the loop
+        )
+        
+        y_pred_probs = model.predict(X_test)
+        y_pred = np.argmax(y_pred_probs, axis=1)
+        
+        manual_precision, manual_recall, manual_f1, _ = compute_weighted_metrics(y_test, y_pred)
+        print(f"Manual  -> Precision: {manual_precision:.3f}, Recall: {manual_recall:.3f}, F1: {manual_f1:.3f}\n")
+        
+        user_metrics.append((user, manual_precision, manual_recall, manual_f1))
+
+    # Summarize results across users
+    metrics_df = pd.DataFrame(user_metrics, columns=["User", "Precision", "Recall", "F1"])
+    avg_f1 = metrics_df["F1"].mean() if not metrics_df.empty else float("nan")
+
+    print("=== Summary Per User (DNN) ===")
+    print(metrics_df)
+    print(f"\nAverage F1 across users: {avg_f1:.3f}")
+    return metrics_df
 
 
 '''Part 3 (Extra credit):
@@ -259,18 +469,24 @@ if __name__ == "__main__":
     # Path to UCI HAR Dataset folder
     base_path = Path("./UCI HAR Dataset")
 
-    print("\n===Part 1===\n")
+    # print("\n===Part 1===\n")
 
-    X_train, X_test, y_train, y_test = load_har_aggregate_dataset(base_path)
-    best_k = find_best_k(X_train, y_train) # We found the best k using validation fold
-    knn_for_aggregate_data(base_path, k=best_k) 
+    # X_train, X_test, y_train, y_test = load_har_aggregate_dataset(base_path)
+    # best_k = find_best_k(X_train, y_train) # We found the best k using validation fold
+    # knn_for_aggregate_data(base_path, k=best_k) 
 
-    user_df = load_har_user_dataset(base_path)     
-    knn_per_user(user_df, k=5) # We chose the best k by trying k manually for user-specific (individual) data
+    # user_df = load_har_user_dataset(base_path)     
+    # knn_per_user(user_df, k=5) # We chose the best k by trying k manually for user-specific (individual) data
 
     print("\n===Part 2===\n")
-
-
+    # Note: DNN training can be slow!
+    # Set epochs to 1 or 2 for a quick test, 10-20 for a real run.
+    dnn_epochs = 10 
+    dnn_for_aggregate_data(base_path, epochs=dnn_epochs)
+    
+    # User-specific models train on less data, can use fewer epochs
+    dnn_user_epochs = 5
+    dnn_per_user(base_path, epochs=dnn_user_epochs)
 
 
     print("\n===Part 3===\n")
