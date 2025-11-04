@@ -13,62 +13,55 @@ Run the script: python main.py
 Install packages: pip install -r requirements.txt
 Make sure you are in the same directory as your requirements.txt
 ==================================== PART 1 =======================================================
-Aggregate KNN:
-5-fold cross-validation on the training set was used to find the optimal number of neighbors (k). Tested k from 1 to 20.
-Trained on all subjects combined using the best k.
-Evaluated on the test set with precision, recall, F1-score, and confusion matrix.
+Aggregate KNN
+Goal: Evaluate activity recognition across all users combined.
+Method: 5-fold cross-validation was performed on the training set to determine the optimal number of neighbors (k), testing values from 1 to 20.
+Training: The KNN classifier was trained on the aggregated data from all subjects using the best k.
+Evaluation: The model was evaluated on the test set. Precision, recall, and F1-score were computed manually (without using built-in metric functions), along with the confusion matrix for detailed performance analysis.
 
-User-specific KNN:
-Trained and evaluated a separate KNN per user (30 users).
-Metrics computed: precision, recall, and F1-score.
-For user-specific KNN, each user has a much smaller dataset, often with very few samples. 
-Cross-validation can become unstable with small data, and the F1 score can fluctuate a lot.
-Chose the best k by trying k manually and inspecting the average F1 across users.
+User-specific KNN
+Goal: Evaluate personalization by training a separate KNN model per individual user (30 users in total).
+Method: Each user’s data was split into training and testing subsets (typically 80/20). Metrics (precision, recall, F1) were calculated manually for each user.
+Parameter tuning: Since user-specific datasets are much smaller, cross-validation becomes unstable. The F1-scores can fluctuate considerably between runs. The best k was chosen manually by experimenting with different values and comparing the average F1-score across users to ensure stability and fairness.
 
 Terminal Output:
 ===Part 1===
 
-k=1, Mean F1-score=0.8783
-k=2, Mean F1-score=0.8668
-k=3, Mean F1-score=0.8910
-k=4, Mean F1-score=0.8897
-k=5, Mean F1-score=0.8958
-k=6, Mean F1-score=0.8946
-k=7, Mean F1-score=0.8988
-k=8, Mean F1-score=0.8978
-k=9, Mean F1-score=0.8973
-k=10, Mean F1-score=0.8964
-k=11, Mean F1-score=0.8977
-k=12, Mean F1-score=0.8976
-k=13, Mean F1-score=0.8987
-k=14, Mean F1-score=0.9002
-k=15, Mean F1-score=0.9009
-k=16, Mean F1-score=0.9012
-k=17, Mean F1-score=0.9010
-k=18, Mean F1-score=0.8999
-k=19, Mean F1-score=0.8993
-k=20, Mean F1-score=0.8996
+k =  1 → Mean F1-score = 0.8783
+k =  2 → Mean F1-score = 0.8668
+k =  3 → Mean F1-score = 0.8910
+k =  4 → Mean F1-score = 0.8897
+k =  5 → Mean F1-score = 0.8958
+k =  6 → Mean F1-score = 0.8946
+k =  7 → Mean F1-score = 0.8988
+k =  8 → Mean F1-score = 0.8978
+k =  9 → Mean F1-score = 0.8973
+k = 10 → Mean F1-score = 0.8964
+k = 11 → Mean F1-score = 0.8977
+k = 12 → Mean F1-score = 0.8976
+k = 13 → Mean F1-score = 0.8987
+k = 14 → Mean F1-score = 0.9002
+k = 15 → Mean F1-score = 0.9009
+k = 16 → Mean F1-score = 0.9012
+k = 17 → Mean F1-score = 0.9010
+k = 18 → Mean F1-score = 0.8999
+k = 19 → Mean F1-score = 0.8993
+k = 20 → Mean F1-score = 0.8996
 
-Best k: 16 with F1-score=0.9012
-=== Running Aggregate KNN Classifier ===
-Train set: (7352, 561), Test set: (2947, 561)
-Training KNN classifier...
+Best k = 16 (Mean F1 = 0.9012)
 
-=== Classification Report ===
-              precision    recall  f1-score   support
+=== Aggregate KNN Classifier ===
+Train: (7352, 561), Test: (2947, 561)
 
-           1     0.8446    0.9859    0.9098       496
-           2     0.8931    0.9045    0.8987       471
-           3     0.9612    0.7667    0.8530       420
-           4     0.9176    0.8167    0.8642       491
-           5     0.8510    0.9342    0.8907       532
-           6     1.0000    0.9963    0.9981       537
+Training KNN with k = 16 ...
+Predicting test data...
 
-    accuracy                         0.9060      2947
-   macro avg     0.9112    0.9007    0.9024      2947
-weighted avg     0.9106    0.9060    0.9050      2947
+=== Manual Evaluation Metrics (Aggregate) ===
+Precision (weighted): 0.911
+Recall (weighted):    0.906
+F1-score (weighted):  0.905
 
-=== Confusion Matrix ===
+Confusion Matrix:
 [[489   0   7   0   0   0]
  [ 39 426   6   0   0   0]
  [ 51  47 322   0   0   0]
@@ -80,97 +73,129 @@ weighted avg     0.9106    0.9060    0.9050      2947
 
 Total users: 30
 
+Printing both sklearn built-in metrics and manual calculation metrics for comparison. 
+
 --- User 1 ---
-Precision: 1.000, Recall: 1.000, F1: 1.000
+Sklearn -> Precision: 1.000, Recall: 1.000, F1: 1.000
+Manual  -> Precision: 1.000, Recall: 1.000, F1: 1.000
 
 --- User 2 ---
-Precision: 0.970, Recall: 0.967, F1: 0.967
+Sklearn -> Precision: 0.970, Recall: 0.967, F1: 0.967
+Manual  -> Precision: 0.970, Recall: 0.967, F1: 0.967
 
 --- User 3 ---
-Precision: 0.962, Recall: 0.957, F1: 0.956
+Sklearn -> Precision: 0.962, Recall: 0.957, F1: 0.956
+Manual  -> Precision: 0.962, Recall: 0.957, F1: 0.956
 
 --- User 4 ---
-Precision: 0.946, Recall: 0.922, F1: 0.916
+Sklearn -> Precision: 0.946, Recall: 0.922, F1: 0.916
+Manual  -> Precision: 0.946, Recall: 0.922, F1: 0.916
 
 --- User 5 ---
-Precision: 0.952, Recall: 0.951, F1: 0.950
+Sklearn -> Precision: 0.952, Recall: 0.951, F1: 0.950
+Manual  -> Precision: 0.952, Recall: 0.951, F1: 0.950
 
 --- User 6 ---
-Precision: 0.955, Recall: 0.938, F1: 0.936
+Sklearn -> Precision: 0.955, Recall: 0.938, F1: 0.936
+Manual  -> Precision: 0.955, Recall: 0.938, F1: 0.936
 
 --- User 7 ---
-Precision: 0.973, Recall: 0.968, F1: 0.967
+Sklearn -> Precision: 0.973, Recall: 0.968, F1: 0.967
+Manual  -> Precision: 0.973, Recall: 0.968, F1: 0.967
 
 --- User 8 ---
-Precision: 1.000, Recall: 1.000, F1: 1.000
+Sklearn -> Precision: 1.000, Recall: 1.000, F1: 1.000
+Manual  -> Precision: 1.000, Recall: 1.000, F1: 1.000
 
 --- User 9 ---
-Precision: 0.934, Recall: 0.931, F1: 0.930
+Sklearn -> Precision: 0.934, Recall: 0.931, F1: 0.930
+Manual  -> Precision: 0.934, Recall: 0.931, F1: 0.930
 
 --- User 10 ---
-Precision: 1.000, Recall: 1.000, F1: 1.000
+Sklearn -> Precision: 1.000, Recall: 1.000, F1: 1.000
+Manual  -> Precision: 1.000, Recall: 1.000, F1: 1.000
 
 --- User 11 ---
-Precision: 0.974, Recall: 0.969, F1: 0.969
+Sklearn -> Precision: 0.974, Recall: 0.969, F1: 0.969
+Manual  -> Precision: 0.974, Recall: 0.969, F1: 0.969
 
 --- User 12 ---
-Precision: 0.986, Recall: 0.984, F1: 0.984
+Sklearn -> Precision: 0.986, Recall: 0.984, F1: 0.984
+Manual  -> Precision: 0.986, Recall: 0.984, F1: 0.984
 
 --- User 13 ---
-Precision: 0.986, Recall: 0.985, F1: 0.985
+Sklearn -> Precision: 0.986, Recall: 0.985, F1: 0.985
+Manual  -> Precision: 0.986, Recall: 0.985, F1: 0.985
 
 --- User 14 ---
-Precision: 0.947, Recall: 0.938, F1: 0.938
+Sklearn -> Precision: 0.947, Recall: 0.938, F1: 0.938
+Manual  -> Precision: 0.947, Recall: 0.938, F1: 0.938
 
 --- User 15 ---
-Precision: 0.986, Recall: 0.985, F1: 0.985
+Sklearn -> Precision: 0.986, Recall: 0.985, F1: 0.985
+Manual  -> Precision: 0.986, Recall: 0.985, F1: 0.985
 
 --- User 16 ---
-Precision: 0.941, Recall: 0.919, F1: 0.914
+Sklearn -> Precision: 0.941, Recall: 0.919, F1: 0.914
+Manual  -> Precision: 0.941, Recall: 0.919, F1: 0.914
 
 --- User 17 ---
-Precision: 0.976, Recall: 0.973, F1: 0.973
+Sklearn -> Precision: 0.976, Recall: 0.973, F1: 0.973
+Manual  -> Precision: 0.976, Recall: 0.973, F1: 0.973
 
 --- User 18 ---
-Precision: 0.960, Recall: 0.959, F1: 0.959
+Sklearn -> Precision: 0.960, Recall: 0.959, F1: 0.959
+Manual  -> Precision: 0.960, Recall: 0.959, F1: 0.959
 
 --- User 19 ---
-Precision: 0.987, Recall: 0.986, F1: 0.986
+Sklearn -> Precision: 0.987, Recall: 0.986, F1: 0.986
+Manual  -> Precision: 0.987, Recall: 0.986, F1: 0.986
 
 --- User 20 ---
-Precision: 0.987, Recall: 0.986, F1: 0.986
+Sklearn -> Precision: 0.987, Recall: 0.986, F1: 0.986
+Manual  -> Precision: 0.987, Recall: 0.986, F1: 0.986
 
 --- User 21 ---
-Precision: 0.964, Recall: 0.963, F1: 0.963
+Sklearn -> Precision: 0.964, Recall: 0.963, F1: 0.963
+Manual  -> Precision: 0.964, Recall: 0.963, F1: 0.963
 
 --- User 22 ---
-Precision: 0.986, Recall: 0.985, F1: 0.985
+Sklearn -> Precision: 0.986, Recall: 0.985, F1: 0.985
+Manual  -> Precision: 0.986, Recall: 0.985, F1: 0.985
 
 --- User 23 ---
-Precision: 0.977, Recall: 0.973, F1: 0.973
+Sklearn -> Precision: 0.977, Recall: 0.973, F1: 0.973
+Manual  -> Precision: 0.977, Recall: 0.973, F1: 0.973
 
 --- User 24 ---
-Precision: 0.988, Recall: 0.987, F1: 0.987
+Sklearn -> Precision: 0.988, Recall: 0.987, F1: 0.987
+Manual  -> Precision: 0.988, Recall: 0.987, F1: 0.987
 
 --- User 25 ---
-Precision: 0.952, Recall: 0.951, F1: 0.951
+Sklearn -> Precision: 0.952, Recall: 0.951, F1: 0.951
+Manual  -> Precision: 0.952, Recall: 0.951, F1: 0.951
 
 --- User 26 ---
-Precision: 0.975, Recall: 0.975, F1: 0.975
+Sklearn -> Precision: 0.975, Recall: 0.975, F1: 0.975
+Manual  -> Precision: 0.975, Recall: 0.975, F1: 0.975
 
 --- User 27 ---
-Precision: 0.988, Recall: 0.987, F1: 0.987
+Sklearn -> Precision: 0.988, Recall: 0.987, F1: 0.987
+Manual  -> Precision: 0.988, Recall: 0.987, F1: 0.987
 
 --- User 28 ---
-Precision: 0.924, Recall: 0.922, F1: 0.922
+Sklearn -> Precision: 0.924, Recall: 0.922, F1: 0.922
+Manual  -> Precision: 0.924, Recall: 0.922, F1: 0.922
 
 --- User 29 ---
-Precision: 0.975, Recall: 0.971, F1: 0.971
+Sklearn -> Precision: 0.975, Recall: 0.971, F1: 0.971
+Manual  -> Precision: 0.975, Recall: 0.971, F1: 0.971
 
 --- User 30 ---
-Precision: 0.977, Recall: 0.974, F1: 0.974
+Sklearn -> Precision: 0.977, Recall: 0.974, F1: 0.974
+Manual  -> Precision: 0.977, Recall: 0.974, F1: 0.974
 
-=== Summary (F1 per user) ===
+=== Summary Per User ===
     User  Precision    Recall        F1
 0      1   1.000000  1.000000  1.000000
 1      2   0.970113  0.967213  0.967100
