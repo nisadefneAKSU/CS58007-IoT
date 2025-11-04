@@ -343,7 +343,7 @@ def build_cnn_model(input_shape=(128, 9), n_classes=6):
 
 ### Train and evaluate 1D-CNN for aggregate data
 def dnn_for_aggregate_data(base_path, epochs=10, batch_size=32):
-    print("\n=== 1D-CNN Classifier For Aggregate Raw Data ===")
+    print("=== 1D-CNN Classifier For Aggregate Raw Data ===")
     X_train, X_test, y_train, y_test = load_har_raw_dataset(base_path)
     print(f"Train: {X_train.shape}, Test: {X_test.shape}")
 
@@ -361,7 +361,7 @@ def dnn_for_aggregate_data(base_path, epochs=10, batch_size=32):
         epochs=epochs,
         batch_size=batch_size,
         validation_split=0.2,
-        verbose=1 # Show progress bar
+        verbose=0 # Show progress bar
     )
     
     print("\nEvaluating on test set...")
