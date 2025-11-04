@@ -3,9 +3,11 @@ import pandas as pd
 import os
 from sklearn.metrics import precision_score, recall_score, f1_score
 from sklearn.model_selection import train_test_split
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_val_score # For choosing the k for aggregate data KNN via k-fold cross-validation
 from collections import defaultdict
 from pathlib import Path
+from sklearn.base import BaseEstimator, ClassifierMixin # Allows integration with sklearn tools (in our case cross_val_score)
+import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv1D, MaxPooling1D, Flatten, Dense, Dropout
@@ -17,55 +19,70 @@ Train the classifier using the training feature set. Test your classifier with t
 Compute precision, recall, and F1 manually (no built-in metrics).
 '''
 
-### Manually implemented KNN without sklearn
+### Manual KNN classifier class (sklearn-compatible) implemented only for picking best k
+class ManualKNNClassifier(BaseEstimator, ClassifierMixin):
+    def __init__(self, k=5):
+        # Constructor that stores the number of k
+        self.k = k
+
+    def fit(self, X, y):
+        # Stores the training data and labels.
+        self.X_train = np.asarray(X, dtype=float)
+        self.y_train = np.asarray(y)                
+        return self                                
+
+    def predict(self, X):
+        # Predicts labels for input samples using our manual KNN implementation.
+        # Calls the function 'manual_knn_classifier' below. 
+        return manual_knn_classifier(self.X_train, self.y_train, X, self.k)
+
+### Manual KNN classifier using Euclidean distance, also efficient and vectorized to be faster
 def manual_knn_classifier(X_train, y_train, X_test, k):
-    # Convert all data to NumPy arrays and ensure float dtype
     X_train = np.asarray(X_train, dtype=float)
     X_test = np.asarray(X_test, dtype=float)
     y_train = np.asarray(y_train)
-    predictions = []
+    predictions = [] # Store predicted labels for each testing
 
-    for x in X_test: # Loop through each test sample
-        # Compute Euclidean distance between this test sample and all train samples
-        distances = np.sqrt(np.sum((X_train - x) ** 2, axis=1))
+    # Precompute squared norms of training samples for efficient distance calculation
+    train_sq = np.sum(X_train ** 2, axis=1)
 
-        # Get indices of k nearest neighbors (smallest distances)
-        nearest_indices = np.argsort(distances)[:k]
+    # Loop over each test sample
+    for x in X_test:
+        # Compute squared Euclidean distance using vectorized formula
+        dists = np.sqrt(train_sq - 2 * X_train.dot(x) + np.sum(x ** 2))
 
-        # Get the corresponding labels
-        nearest_labels = y_train[nearest_indices]
+        # Get indices of k smallest distances
+        nearest_idx = np.argpartition(dists, k)[:k]
 
-        # Majority vote: choose the most common label
+        # Get the labels of those k nearest samples
+        nearest_labels = y_train[nearest_idx]
+
+        # Count occurrences of each label and select the majority one
         values, counts = np.unique(nearest_labels, return_counts=True)
         predicted_label = values[np.argmax(counts)]
-
-        # Append prediction
         predictions.append(predicted_label)
 
     return np.array(predictions)
 
-### Find the optimal k for manual KNN using a held-out validation split
+### Find the best k using 5-fold cross-validation and use weighted F1-score as the evaluation metric
 def find_best_k(X_train, y_train, k_values=range(1, 11)):
-    X_train = np.asarray(X_train, dtype=float)
-    y_train = np.asarray(y_train)
+    best_k = None       # Best k value found so far
+    best_f1 = -1.0      # Best F1-score found so far
 
-    # Split once into train/val
-    X_tr, X_val, y_tr, y_val = train_test_split(
-        X_train, y_train, test_size=0.2, stratify=y_train, random_state=42
-    )
-
-    best_k = None
-    best_f1 = -1.0
-
-    print("Finding best k using validation fold:")
     for k in k_values:
-        # Manual KNN predictions
-        y_val_pred = manual_knn_classifier(X_tr, y_tr, X_val, k=k)
-        # Manual metrics
-        precision, recall, f1, _ = compute_weighted_metrics(y_val, y_val_pred)
-        print(f"k = {k:2d} → validation F1 = {f1:.4f}")
-        if f1 > best_f1:
-            best_f1 = f1
+        # Initialize our manual KNN model with current k
+        knn = ManualKNNClassifier(k=k)
+
+        # Evaluate using 5-fold cross-validation with weighted F1-score
+        f1_scores = cross_val_score(knn, X_train, y_train, cv=5, scoring='f1_weighted')
+
+        # Compute the mean F1-score across all folds
+        mean_f1 = f1_scores.mean()
+        print(f"k ={k:2d} → Mean F1-score = {mean_f1:.4f}")
+
+        # If this k gives a better mean F1, update best parameters
+        if mean_f1 > best_f1:
+            best_f1 = mean_f1
             best_k = k
 
     print(f"\nPicked best k = {best_k} (Validation F1 = {best_f1:.4f})")
@@ -437,7 +454,6 @@ def dnn_per_user(base_path, epochs=5, batch_size=32):
     print(f"\nAverage F1 across users: {avg_f1:.3f}")
     return metrics_df
 
-
 '''Part 3 (Extra credit):
 Implement inference and training of 3 Perceptrons: OR, NAND and AND.
 Combine them together to implement XOR'''
@@ -457,7 +473,6 @@ def train_perceptron(X, y, lr=0.1, epochs=10):
             b += lr * (yi - y_pred)
     return w, b
 
-
 ### XOR function
 def xor(x):
     or_out = step(np.dot(x, w_or) + b_or)
@@ -469,16 +484,17 @@ if __name__ == "__main__":
     # Path to UCI HAR Dataset folder
     base_path = Path("./UCI HAR Dataset")
 
-    # print("\n===Part 1===\n")
+    print("\n===Part 1===\n")
 
-    # X_train, X_test, y_train, y_test = load_har_aggregate_dataset(base_path)
-    # best_k = find_best_k(X_train, y_train) # We found the best k using validation fold
-    # knn_for_aggregate_data(base_path, k=best_k) 
+    X_train, X_test, y_train, y_test = load_har_aggregate_dataset(base_path)
+    best_k = find_best_k(X_train, y_train) # We found the best k by cross-validation
+    knn_for_aggregate_data(base_path, k=best_k) 
 
-    # user_df = load_har_user_dataset(base_path)     
-    # knn_per_user(user_df, k=5) # We chose the best k by trying k manually for user-specific (individual) data
+    user_df = load_har_user_dataset(base_path)     
+    knn_per_user(user_df, k=5) # We chose the best k by trying k manually for user-specific (individual) data
 
     print("\n===Part 2===\n")
+
     # Note: DNN training can be slow!
     # Set epochs to 1 or 2 for a quick test, 10-20 for a real run.
     dnn_epochs = 10 
@@ -487,7 +503,6 @@ if __name__ == "__main__":
     # User-specific models train on less data, can use fewer epochs
     dnn_user_epochs = 5
     dnn_per_user(base_path, epochs=dnn_user_epochs)
-
 
     print("\n===Part 3===\n")
 
@@ -511,5 +526,3 @@ if __name__ == "__main__":
     print("-----------------------------")
     for xi in X:
         print(f"   {xi[0]}    |    {xi[1]}    |     {xor(xi)}")
-
-
