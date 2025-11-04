@@ -1,9 +1,6 @@
 import numpy as np
 import pandas as pd
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import classification_report, confusion_matrix
 import os
-from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import precision_score, recall_score, f1_score
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import cross_val_score
@@ -17,53 +14,82 @@ Train the classifier using the training feature set. Test your classifier with t
 Compute precision, recall, and F1 manually (no built-in metrics).
 '''
 
-# ---------------------------------------------------------------
-# Find the best k using cross-validation (For aggregate data)
-# ---------------------------------------------------------------
-def find_best_k(X_train, y_train, k_values=range(1, 21)):
-    best_k = None
-    best_f1 = 0  # Track best F1-score found
+### Manually implemented KNN without sklearn
+def manual_knn_classifier(X_train, y_train, X_test, k):
+    # Convert all data to NumPy arrays and ensure float dtype
+    X_train = np.asarray(X_train, dtype=float)
+    X_test = np.asarray(X_test, dtype=float)
+    y_train = np.asarray(y_train)
+    predictions = []
 
-    # Try each k value and evaluate using 5-fold cross-validation
+    for x in X_test: # Loop through each test sample
+        # Compute Euclidean distance between this test sample and all train samples
+        distances = np.sqrt(np.sum((X_train - x) ** 2, axis=1))
+
+        # Get indices of k nearest neighbors (smallest distances)
+        nearest_indices = np.argsort(distances)[:k]
+
+        # Get the corresponding labels
+        nearest_labels = y_train[nearest_indices]
+
+        # Majority vote: choose the most common label
+        values, counts = np.unique(nearest_labels, return_counts=True)
+        predicted_label = values[np.argmax(counts)]
+
+        # Append prediction
+        predictions.append(predicted_label)
+
+    return np.array(predictions)
+
+### Find the optimal k for manual KNN using a held-out validation split
+def find_best_k(X_train, y_train, k_values=range(1, 11)):
+    X_train = np.asarray(X_train, dtype=float)
+    y_train = np.asarray(y_train)
+
+    # Split once into train/val
+    X_tr, X_val, y_tr, y_val = train_test_split(
+        X_train, y_train, test_size=0.2, stratify=y_train, random_state=42
+    )
+
+    best_k = None
+    best_f1 = -1.0
+
+    print("Finding best k using validation fold:")
     for k in k_values:
-        knn = KNeighborsClassifier(n_neighbors=k)
-        f1_scores = cross_val_score(knn, X_train, y_train, cv=5, scoring='f1_weighted')
-        mean_f1 = f1_scores.mean()
-        print(f"k = {k:2d} → Mean F1-score = {mean_f1:.4f}")
-        
-        # Update best k if a better F1-score is found
-        if mean_f1 > best_f1:
-            best_f1 = mean_f1
+        # Manual KNN predictions
+        y_val_pred = manual_knn_classifier(X_tr, y_tr, X_val, k=k)
+        # Manual metrics
+        precision, recall, f1, _ = compute_weighted_metrics(y_val, y_val_pred)
+        print(f"k = {k:2d} → validation F1 = {f1:.4f}")
+        if f1 > best_f1:
+            best_f1 = f1
             best_k = k
 
-    print(f"\nBest k = {best_k} (Mean F1 = {best_f1:.4f})")
+    print(f"\nPicked best k = {best_k} (Validation F1 = {best_f1:.4f})\n")
     return best_k
 
-# ---------------------------------------------------------------
-# Manual implementation of weighted precision, recall, and F1 metrics
-# ---------------------------------------------------------------
+### Calculate precision, recall, and F1 manually for each class, then compute their weighted average based on class support
 def compute_weighted_metrics(y_true, y_pred):
-    # Calculates precision, recall, and F1 manually for each class,then computes their weighted averages based on class support.
     labels = sorted(set(y_true))  # All unique activity labels
-    metrics = defaultdict(dict)   # Store metrics for each class
-    support_total = 0             # Total number of samples
+    metrics = defaultdict(dict)   # For storing
+    total_support = 0             # Total number of samples
     weighted_precision = 0
     weighted_recall = 0
     weighted_f1 = 0
 
     for label in labels:
-        # True positives, false positives, false negatives
+        # True positives, false positives, false negatives for each activity label
         TP = sum((yt == label and yp == label) for yt, yp in zip(y_true, y_pred))
         FP = sum((yt != label and yp == label) for yt, yp in zip(y_true, y_pred))
         FN = sum((yt == label and yp != label) for yt, yp in zip(y_true, y_pred))
         support = sum(yt == label for yt in y_true)
 
-        # Manual formulas (handling division by zero)
+        # Manual formulas (also handling division by zero)
         precision = TP / (TP + FP) if (TP + FP) > 0 else 0
         recall = TP / (TP + FN) if (TP + FN) > 0 else 0
         f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
 
-        # Save class-level metrics
+        # Save the calculated metrics
         metrics[label] = {
             "support": support,
             "precision": precision,
@@ -72,23 +98,21 @@ def compute_weighted_metrics(y_true, y_pred):
         }
 
         # Weighted totals (weighted by number of samples per class)
-        support_total += support
+        total_support += support
         weighted_precision += support * precision
         weighted_recall += support * recall
         weighted_f1 += support * f1
 
     # Normalize by total number of samples
-    weighted_precision /= support_total
-    weighted_recall /= support_total
-    weighted_f1 /= support_total
+    weighted_precision /= total_support
+    weighted_recall /= total_support
+    weighted_f1 /= total_support
 
     return weighted_precision, weighted_recall, weighted_f1, metrics
 
-# ---------------------------------------------------------------
-# Load the UCI HAR dataset (For aggregate data)
-# ---------------------------------------------------------------
-def load_har_dataset(base_path):
-    # Loads training and test sets from the dataset. Each row corresponds to a pre-computed feature vector for one time window.
+### Load the UCI HAR dataset for aggregate data
+def load_har_aggregate_dataset(base_path):
+    # Load training and test sets
     X_train = np.loadtxt(base_path / "train" / "X_train.txt")
     y_train = np.loadtxt(base_path / "train" / "y_train.txt").astype(int)
     X_test = np.loadtxt(base_path / "test" / "X_test.txt")
@@ -96,43 +120,34 @@ def load_har_dataset(base_path):
     
     return X_train, X_test, y_train, y_test
 
-# ---------------------------------------------------------------
-# Train and evaluate KNNs (For aggregate data using manual metric calculation)
-# ---------------------------------------------------------------
-def run_knn_aggregate(base_path, k=5):
-    print("\n=== Aggregate KNN Classifier ===")
-
-    # Load full dataset
-    X_train, X_test, y_train, y_test = load_har_dataset(base_path)
+### Train and evaluate KNN for aggregate data and compute the evaluation metrics
+def knn_for_aggregate_data(base_path, k=5):
+    print("\n=== Manual KNN Classifier For Aggregate Data ===")
+    X_train, X_test, y_train, y_test = load_har_aggregate_dataset(base_path)
     print(f"Train: {X_train.shape}, Test: {X_test.shape}")
 
-    # Train KNN with best k
-    print(f"\nTraining KNN with k = {k} ...")
-    knn = KNeighborsClassifier(n_neighbors=k)
-    knn.fit(X_train, y_train)
+    print(f"\nTraining manual KNN with k = {k}...")
+    y_pred = manual_knn_classifier(X_train, y_train, X_test, k)
 
-    # Predict on test data
-    print("Predicting test data...")
-    y_pred = knn.predict(X_test)
-
-    # Compute precision, recall, and F1 manually
     precision, recall, f1, metrics = compute_weighted_metrics(y_test, y_pred)
-
     print("\n=== Manual Evaluation Metrics (Aggregate) ===")
     print(f"Precision (weighted): {precision:.3f}")
     print(f"Recall (weighted):    {recall:.3f}")
     print(f"F1-score (weighted):  {f1:.3f}")
 
+    # Print the confusion matrix
+    labels = sorted(set(y_test))
+    cm = np.zeros((len(labels), len(labels)), dtype=int)
+    for yt, yp in zip(y_test, y_pred):
+        cm[labels.index(yt)][labels.index(yp)] += 1
     print("\nConfusion Matrix:")
-    print(confusion_matrix(y_test, y_pred))
+    print(pd.DataFrame(cm, index=labels, columns=labels))
 
-    return knn
+    return
 
-# ---------------------------------------------------------------
-# Load user-specific HAR data (For individual data)
-# ---------------------------------------------------------------
+### Load user-specific HAR data
 def load_har_user_dataset(base_path):
-    # Combines train and test data into a single dataset and attaches subject (user) IDs so that user-specific models can be trained.
+    # Combine train and test data into a single dataset and attache subject (user) IDs so that user-specific models can be trained
     X_train = np.loadtxt(os.path.join(base_path, "train", "X_train.txt"))
     y_train = np.loadtxt(os.path.join(base_path, "train", "y_train.txt")).astype(int)
     subject_train = np.loadtxt(os.path.join(base_path, "train", "subject_train.txt")).astype(int)
@@ -144,21 +159,19 @@ def load_har_user_dataset(base_path):
     # Merge train and test splits together
     X_all = np.concatenate((X_train, X_test), axis=0)
     y_all = np.concatenate((y_train, y_test), axis=0)
-    subj_all = np.concatenate((subject_train, subject_test), axis=0)
+    subject_all = np.concatenate((subject_train, subject_test), axis=0)
 
     # Convert to DataFrame for easier filtering by subject
     X_all = pd.DataFrame(X_all, columns=[f"feature_{i}" for i in range(X_all.shape[1])])
     df = X_all.copy()
     df["label"] = y_all
-    df["subject"] = subj_all
+    df["subject"] = subject_all
 
     return df
 
-# ---------------------------------------------------------------
-# Train and evaluate user-specific KNNs (For individual data using manual metric calculation)
-# ---------------------------------------------------------------
-def run_knn_per_user(df, k=5):
-    # Trains one KNN model per user and evaluates it manually. This demonstrates personalization vs. aggregate modeling.
+### Train and evaluate user-specific KNNs
+def knn_per_user(df, k=5):
+    # Train one KNN model per user and evaluates it manually
     users = sorted(df["subject"].unique())
     print(f"\n=== Running Individual User-Specific KNN Classifiers ===")
     print(f"\nTotal users: {len(users)}\n")
@@ -182,12 +195,8 @@ def run_knn_per_user(df, k=5):
         # 80/20 train-test split, stratified by label distribution
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)
 
-        # Train KNN
-        knn = KNeighborsClassifier(n_neighbors=k)
-        knn.fit(X_train, y_train)
-
-        # Predict and evaluate
-        y_pred = knn.predict(X_test)
+        # Train and evaluate KNN
+        y_pred = manual_knn_classifier(X_train, y_train, X_test, k)
 
         # Compare manual vs sklearn metrics
         precision = precision_score(y_test, y_pred, average="weighted", zero_division=0)
@@ -223,15 +232,11 @@ Compute precision, recall, and F1'''
 Implement inference and training of 3 Perceptrons: OR, NAND and AND.
 Combine them together to implement XOR'''
 
-# ---------------------------------------------------------------
-# Step function
-# ---------------------------------------------------------------
+### Step function
 def step(x):
     return 1 if x >= 0 else 0
 
-# ---------------------------------------------------------------
-# Train a perceptron
-# ---------------------------------------------------------------
+### Train a perceptron
 def train_perceptron(X, y, lr=0.1, epochs=10):
     w = np.zeros(X.shape[1])
     b = 0
@@ -242,29 +247,26 @@ def train_perceptron(X, y, lr=0.1, epochs=10):
             b += lr * (yi - y_pred)
     return w, b
 
-# ---------------------------------------------------------------
-# XOR function
-# ---------------------------------------------------------------
+
+### XOR function
 def xor(x):
     or_out = step(np.dot(x, w_or) + b_or)
     nand_out = step(np.dot(x, w_nand) + b_nand)
     return step(np.dot([or_out, nand_out], w_and) + b_and)
 
-# ---------------------------------------------------------------
-# Main execution
-# ---------------------------------------------------------------
+### Main execution
 if __name__ == "__main__":
     # Path to UCI HAR Dataset folder
     base_path = Path("./UCI HAR Dataset")
 
     print("\n===Part 1===\n")
 
-    X_train, X_test, y_train, y_test = load_har_dataset(base_path)
+    X_train, X_test, y_train, y_test = load_har_aggregate_dataset(base_path)
     best_k = find_best_k(X_train, y_train) # We found the best k by cross-validation
-    run_knn_aggregate(base_path, k=best_k) 
+    knn_for_aggregate_data(base_path, k=best_k) 
 
     user_df = load_har_user_dataset(base_path)     
-    run_knn_per_user(user_df, k=5) # We chose the best k by trying k manually for user-specific (individual) data
+    knn_per_user(user_df, k=5) # We chose the best k by trying k manually for user-specific (individual) data
 
     print("\n===Part 2===\n")
 
