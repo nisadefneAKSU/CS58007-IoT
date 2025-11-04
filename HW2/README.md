@@ -28,7 +28,7 @@ Aggregate KNN:
 <br>
 Goal: Evaluate activity recognition across all users combined.
 <br>
-Method: 5-fold cross-validation was performed on the training set to determine the optimal number of neighbors (k), testing values from 1 to 20.
+Method: 5-fold cross-validation was performed on the training set to determine the optimal number of neighbors (k), testing values from 1 to 10.
 <br>
 Training: The KNN classifier was trained on the aggregated data from all subjects using the best k.
 <br>
