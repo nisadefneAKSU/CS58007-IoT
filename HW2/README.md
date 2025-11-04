@@ -1,4 +1,5 @@
 ======================================================================
+<br>
 HW2: Machine Learning for Sensing
 <br>
 Group 1 Members:
@@ -25,25 +26,23 @@ Make sure you are in the same directory as your requirements.txt file
 <br>
 Aggregate KNN:
 <br>
-5-fold cross-validation on the training set was used to find the optimal number of neighbors (k). Tested k from 1 to 20.
+Goal: Evaluate activity recognition across all users combined.
 <br>
-Trained on all subjects combined using the best k.
+Method: 5-fold cross-validation was performed on the training set to determine the optimal number of neighbors (k), testing values from 1 to 20.
 <br>
-Evaluated on the test set with precision, recall, F1-score, and confusion matrix.
+Training: The KNN classifier was trained on the aggregated data from all subjects using the best k.
+<br>
+Evaluation: The model was evaluated on the test set. Precision, recall, and F1-score were computed manually (without using built-in metric functions), along with the confusion matrix for detailed performance analysis.
 
 <br>
 
 User-specific KNN:
 <br>
-Trained and evaluated a separate KNN per user (30 users).
+Goal: Evaluate personalization by training a separate KNN model per individual user (30 users in total).
 <br>
-Metrics computed: precision, recall, and F1-score.
+Method: Each user’s data was split into training and testing subsets (typically 80/20). Metrics (precision, recall, F1) were calculated manually for each user.
 <br>
-For user-specific KNN, each user has a much smaller dataset, often with very few samples. 
-<br>
-Cross-validation can become unstable with small data, and the F1 score can fluctuate a lot.
-<br>
-Chose the best k by trying k manually and inspecting the average F1 across users.
+Parameter tuning: Since user-specific datasets are much smaller, cross-validation becomes unstable. The F1-scores can fluctuate considerably between runs. The best k was chosen manually by experimenting with different values and comparing the average F1-score across users to ensure stability and fairness.
 
 <br>
 
@@ -51,37 +50,51 @@ Terminal Output:
 <br>
 ===Part 1===
 ```
-k=1, Mean F1-score=0.8783
-k=2, Mean F1-score=0.8668
-k=3, Mean F1-score=0.8910
-k=4, Mean F1-score=0.8897
-k=5, Mean F1-score=0.8958
-k=6, Mean F1-score=0.8946
-k=7, Mean F1-score=0.8988
-k=8, Mean F1-score=0.8978
-k=9, Mean F1-score=0.8973
-k=10, Mean F1-score=0.8964
-k=11, Mean F1-score=0.8977
-k=12, Mean F1-score=0.8976
-k=13, Mean F1-score=0.8987
-k=14, Mean F1-score=0.9002
-k=15, Mean F1-score=0.9009
-k=16, Mean F1-score=0.9012
-k=17, Mean F1-score=0.9010
-k=18, Mean F1-score=0.8999
-k=19, Mean F1-score=0.8993
-k=20, Mean F1-score=0.8996
+k =  1 → Mean F1-score = 0.8783
+k =  2 → Mean F1-score = 0.8668
+k =  3 → Mean F1-score = 0.8910
+k =  4 → Mean F1-score = 0.8897
+k =  5 → Mean F1-score = 0.8958
+k =  6 → Mean F1-score = 0.8946
+k =  7 → Mean F1-score = 0.8988
+k =  8 → Mean F1-score = 0.8978
+k =  9 → Mean F1-score = 0.8973
+k = 10 → Mean F1-score = 0.8964
+k = 11 → Mean F1-score = 0.8977
+k = 12 → Mean F1-score = 0.8976
+k = 13 → Mean F1-score = 0.8987
+k = 14 → Mean F1-score = 0.9002
+k = 15 → Mean F1-score = 0.9009
+k = 16 → Mean F1-score = 0.9012
+k = 17 → Mean F1-score = 0.9010
+k = 18 → Mean F1-score = 0.8999
+k = 19 → Mean F1-score = 0.8993
+k = 20 → Mean F1-score = 0.8996
 ```
 
-Best k: 16 with F1-score=0.9012
+Best k = 16 (Mean F1 = 0.9012)
 <br>
-=== Running Aggregate KNN Classifier ===
+=== Aggregate KNN Classifier ===
 <br>
-Train set: (7352, 561), Test set: (2947, 561)
+Train: (7352, 561), Test: (2947, 561)
 <br>
-Training KNN classifier...
+Training KNN with k = 16 ...
+<br>
+Predicting test data...
 
 <br>
+
+=== Manual Evaluation Metrics (Aggregate) ===
+<br>
+Precision (weighted): 0.911
+<br>
+Recall (weighted):    0.906
+<br>
+F1-score (weighted):  0.905
+
+<br>
+
+//Remove this Classification Report???
 
 === Classification Report ===
               precision    recall  f1-score   support
@@ -107,142 +120,193 @@ weighted avg     0.9106    0.9060    0.9050      2947
  [  0   0   0   1   1 535]]
 ``` 
 
-|     | Col1 | Col2 | Col3 | Col4 | Col5 | Col6 |
-|----:|-----:|-----:|-----:|-----:|-----:|-----:|
-| **Row1** | 489 | 0 | 7 | 0 | 0 | 0 |
-| **Row2** | 39 | 426 | 6 | 0 | 0 | 0 |
-| **Row3** | 51 | 47 | 322 | 0 | 0 | 0 |
-| **Row4** | 0 | 4 | 0 | 401 | 86 | 0 |
-| **Row5** | 0 | 0 | 0 | 35 | 497 | 0 |
-| **Row6** | 0 | 0 | 0 | 1 | 1 | 535 |
-
 === Running Individual User-Specific KNN Classifiers ===
 
 Total users: 30
 
 --- User 1 ---
 <br>
-Precision: 1.000, Recall: 1.000, F1: 1.000
+Sklearn -> Precision: 1.000, Recall: 1.000, F1: 1.000
+<br>
+Manual  -> Precision: 1.000, Recall: 1.000, F1: 1.000
 
 --- User 2 ---
 <br>
-Precision: 0.970, Recall: 0.967, F1: 0.967
+Sklearn -> Precision: 0.970, Recall: 0.967, F1: 0.967
+<br>
+Manual  -> Precision: 0.970, Recall: 0.967, F1: 0.967
 
 --- User 3 ---
 <br>
-Precision: 0.962, Recall: 0.957, F1: 0.956
+Sklearn -> Precision: 0.962, Recall: 0.957, F1: 0.956
+<br>
+Manual  -> Precision: 0.962, Recall: 0.957, F1: 0.956
 
 --- User 4 ---
 <br>
-Precision: 0.946, Recall: 0.922, F1: 0.916
+Sklearn -> Precision: 0.946, Recall: 0.922, F1: 0.916
+<br>
+Manual  -> Precision: 0.946, Recall: 0.922, F1: 0.916
 
 --- User 5 ---
 <br>
-Precision: 0.952, Recall: 0.951, F1: 0.950
+Sklearn -> Precision: 0.952, Recall: 0.951, F1: 0.950
+<br>
+Manual  -> Precision: 0.952, Recall: 0.951, F1: 0.950
 
 --- User 6 ---
 <br>
-Precision: 0.955, Recall: 0.938, F1: 0.936
+Sklearn -> Precision: 0.955, Recall: 0.938, F1: 0.936
+<br>
+Manual  -> Precision: 0.955, Recall: 0.938, F1: 0.936
 
 --- User 7 ---
 <br>
-Precision: 0.973, Recall: 0.968, F1: 0.967
+Sklearn -> Precision: 0.973, Recall: 0.968, F1: 0.967
+<br>
+Manual  -> Precision: 0.973, Recall: 0.968, F1: 0.967
 
 --- User 8 ---
 <br>
-Precision: 1.000, Recall: 1.000, F1: 1.000
+Sklearn -> Precision: 1.000, Recall: 1.000, F1: 1.000
+<br>
+Manual  -> Precision: 1.000, Recall: 1.000, F1: 1.000
 
 --- User 9 ---
 <br>
-Precision: 0.934, Recall: 0.931, F1: 0.930
+Sklearn -> Precision: 0.934, Recall: 0.931, F1: 0.930
+<br>
+Manual  -> Precision: 0.934, Recall: 0.931, F1: 0.930
 
 --- User 10 ---
 <br>
-Precision: 1.000, Recall: 1.000, F1: 1.000
+Sklearn -> Precision: 1.000, Recall: 1.000, F1: 1.000
+<br>
+Manual  -> Precision: 1.000, Recall: 1.000, F1: 1.000
 
 --- User 11 ---
 <br>
-Precision: 0.974, Recall: 0.969, F1: 0.969
+Sklearn -> Precision: 0.974, Recall: 0.969, F1: 0.969
+<br>
+Manual  -> Precision: 0.974, Recall: 0.969, F1: 0.969
 
 --- User 12 ---
 <br>
-Precision: 0.986, Recall: 0.984, F1: 0.984
+Sklearn -> Precision: 0.986, Recall: 0.984, F1: 0.984
+<br>
+Manual  -> Precision: 0.986, Recall: 0.984, F1: 0.984
 
 --- User 13 ---
 <br>
-Precision: 0.986, Recall: 0.985, F1: 0.985
+Sklearn -> Precision: 0.986, Recall: 0.985, F1: 0.985
+<br>
+Manual  -> Precision: 0.986, Recall: 0.985, F1: 0.985
 
 --- User 14 ---
 <br>
-Precision: 0.947, Recall: 0.938, F1: 0.938
+Sklearn -> Precision: 0.947, Recall: 0.938, F1: 0.938
+<br>
+Manual  -> Precision: 0.947, Recall: 0.938, F1: 0.938
 
 --- User 15 ---
 <br>
-Precision: 0.986, Recall: 0.985, F1: 0.985
+Sklearn -> Precision: 0.986, Recall: 0.985, F1: 0.985
+<br>
+Manual  -> Precision: 0.986, Recall: 0.985, F1: 0.985
 
 --- User 16 ---
 <br>
-Precision: 0.941, Recall: 0.919, F1: 0.914
+Sklearn -> Precision: 0.941, Recall: 0.919, F1: 0.914
+<br>
+Manual  -> Precision: 0.941, Recall: 0.919, F1: 0.914
 
 --- User 17 ---
 <br>
-Precision: 0.976, Recall: 0.973, F1: 0.973
+Sklearn -> Precision: 0.976, Recall: 0.973, F1: 0.973
+<br>
+Manual  -> Precision: 0.976, Recall: 0.973, F1: 0.973
 
 --- User 18 ---
 <br>
-Precision: 0.960, Recall: 0.959, F1: 0.959
+Sklearn -> Precision: 0.960, Recall: 0.959, F1: 0.959
+<br>
+Manual  -> Precision: 0.960, Recall: 0.959, F1: 0.959
 
 --- User 19 ---
 <br>
-Precision: 0.987, Recall: 0.986, F1: 0.986
+Sklearn -> Precision: 0.987, Recall: 0.986, F1: 0.986
+<br>
+Manual  -> Precision: 0.987, Recall: 0.986, F1: 0.986
 
 --- User 20 ---
 <br>
-Precision: 0.987, Recall: 0.986, F1: 0.986
+Sklearn -> Precision: 0.987, Recall: 0.986, F1: 0.986
+<br>
+Manual  -> Precision: 0.987, Recall: 0.986, F1: 0.986
 
 --- User 21 ---
 <br>
-Precision: 0.964, Recall: 0.963, F1: 0.963
+Sklearn -> Precision: 0.964, Recall: 0.963, F1: 0.963
+<br>
+Manual  -> Precision: 0.964, Recall: 0.963, F1: 0.963
 
 --- User 22 ---
 <br>
-Precision: 0.986, Recall: 0.985, F1: 0.985
+Sklearn -> Precision: 0.986, Recall: 0.985, F1: 0.985
+<br>
+Manual  -> Precision: 0.986, Recall: 0.985, F1: 0.985
 
 --- User 23 ---
 <br>
-Precision: 0.977, Recall: 0.973, F1: 0.973
+Sklearn -> Precision: 0.977, Recall: 0.973, F1: 0.973
+<br>
+Manual  -> Precision: 0.977, Recall: 0.973, F1: 0.973
 
 --- User 24 ---
 <br>
-Precision: 0.988, Recall: 0.987, F1: 0.987
+Sklearn -> Precision: 0.988, Recall: 0.987, F1: 0.987
+<br>
+Manual  -> Precision: 0.988, Recall: 0.987, F1: 0.987
 
 --- User 25 ---
 <br>
-Precision: 0.952, Recall: 0.951, F1: 0.951
+Sklearn -> Precision: 0.952, Recall: 0.951, F1: 0.951
+<br>
+Manual  -> Precision: 0.952, Recall: 0.951, F1: 0.951
 
 --- User 26 ---
 <br>
-Precision: 0.975, Recall: 0.975, F1: 0.975
+Sklearn -> Precision: 0.975, Recall: 0.975, F1: 0.975
+<br>
+Manual  -> Precision: 0.975, Recall: 0.975, F1: 0.975
 
 --- User 27 ---
 <br>
-Precision: 0.988, Recall: 0.987, F1: 0.987
+Sklearn -> Precision: 0.988, Recall: 0.987, F1: 0.987
+<br>
+Manual  -> Precision: 0.988, Recall: 0.987, F1: 0.987
 
 --- User 28 ---
 <br>
-Precision: 0.924, Recall: 0.922, F1: 0.922
+Sklearn -> Precision: 0.924, Recall: 0.922, F1: 0.922
+<br>
+Manual  -> Precision: 0.924, Recall: 0.922, F1: 0.922
 
 --- User 29 ---
 <br>
-Precision: 0.975, Recall: 0.971, F1: 0.971
+Sklearn -> Precision: 0.975, Recall: 0.971, F1: 0.971
+<br>
+Manual  -> Precision: 0.975, Recall: 0.971, F1: 0.971
 
 --- User 30 ---
 <br>
-Precision: 0.977, Recall: 0.974, F1: 0.974
+Sklearn -> Precision: 0.977, Recall: 0.974, F1: 0.974
+<br>
+Manual  -> Precision: 0.977, Recall: 0.974, F1: 0.974
 
 <br>
 
-=== Summary (F1 per user) ===
+=== Summary Per User ===
 |   | User | Precision | Recall | F1 |
 |----:|----------:|----------:|----------:|----------:|
 |0   |   1  | 1.000000 | 1.000000 | 1.000000|
