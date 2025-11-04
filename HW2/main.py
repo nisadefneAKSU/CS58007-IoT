@@ -65,7 +65,7 @@ def find_best_k(X_train, y_train, k_values=range(1, 11)):
             best_f1 = f1
             best_k = k
 
-    print(f"\nPicked best k = {best_k} (Validation F1 = {best_f1:.4f})\n")
+    print(f"\nPicked best k = {best_k} (Validation F1 = {best_f1:.4f})")
     return best_k
 
 ### Calculate precision, recall, and F1 manually for each class, then compute their weighted average based on class support
@@ -295,3 +295,4 @@ if __name__ == "__main__":
     print("-----------------------------")
     for xi in X:
         print(f"   {xi[0]}    |    {xi[1]}    |     {xor(xi)}")
+
