@@ -27,53 +27,44 @@ Parameter tuning: Since user-specific datasets are much smaller, cross-validatio
 Terminal Output:
 ===Part 1===
 
-k =  1 → Mean F1-score = 0.8783
-k =  2 → Mean F1-score = 0.8668
-k =  3 → Mean F1-score = 0.8910
-k =  4 → Mean F1-score = 0.8897
-k =  5 → Mean F1-score = 0.8958
-k =  6 → Mean F1-score = 0.8946
-k =  7 → Mean F1-score = 0.8988
-k =  8 → Mean F1-score = 0.8978
-k =  9 → Mean F1-score = 0.8973
-k = 10 → Mean F1-score = 0.8964
-k = 11 → Mean F1-score = 0.8977
-k = 12 → Mean F1-score = 0.8976
-k = 13 → Mean F1-score = 0.8987
-k = 14 → Mean F1-score = 0.9002
-k = 15 → Mean F1-score = 0.9009
-k = 16 → Mean F1-score = 0.9012
-k = 17 → Mean F1-score = 0.9010
-k = 18 → Mean F1-score = 0.8999
-k = 19 → Mean F1-score = 0.8993
-k = 20 → Mean F1-score = 0.8996
+Finding best k using validation fold:
+k =  1 → validation F1 = 0.9660
+k =  2 → validation F1 = 0.9572
+k =  3 → validation F1 = 0.9660
+k =  4 → validation F1 = 0.9606
+k =  5 → validation F1 = 0.9659
+k =  6 → validation F1 = 0.9619
+k =  7 → validation F1 = 0.9611
+k =  8 → validation F1 = 0.9633
+k =  9 → validation F1 = 0.9605
+k = 10 → validation F1 = 0.9633
 
-Best k = 16 (Mean F1 = 0.9012)
+Picked best k = 1 (Validation F1 = 0.9660)
 
-=== Aggregate KNN Classifier ===
+=== Manual KNN Classifier For Aggregate Data ===
 Train: (7352, 561), Test: (2947, 561)
 
-Training KNN with k = 16 ...
-Predicting test data...
+Training manual KNN with k = 1...
 
 === Manual Evaluation Metrics (Aggregate) ===
-Precision (weighted): 0.911
-Recall (weighted):    0.906
-F1-score (weighted):  0.905
+Precision (weighted): 0.880
+Recall (weighted):    0.879
+F1-score (weighted):  0.878
 
 Confusion Matrix:
-[[489   0   7   0   0   0]
- [ 39 426   6   0   0   0]
- [ 51  47 322   0   0   0]
- [  0   4   0 401  86   0]
- [  0   0   0  35 497   0]
- [  0   0   0   1   1 535]]
+     1    2    3    4    5    6
+1  473    8   15    0    0    0
+2   31  422   18    0    0    0
+3   53   46  321    0    0    0
+4    0    2    0  389   99    1
+5    0    0    0   81  451    0
+6    0    0    0    3    1  533
 
 === Running Individual User-Specific KNN Classifiers ===
 
 Total users: 30
 
-Printing both sklearn built-in metrics and manual calculation metrics for comparison. 
+Printing both sklearn built-in metrics and manual calculation metrics for comparison.
 
 --- User 1 ---
 Sklearn -> Precision: 1.000, Recall: 1.000, F1: 1.000
@@ -250,3 +241,4 @@ Input A | Input B | XOR Output
    0    |    1    |     1
    1    |    0    |     1
    1    |    1    |     0
+
