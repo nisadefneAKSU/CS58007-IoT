@@ -221,8 +221,201 @@ Manual  -> Precision: 0.977, Recall: 0.974, F1: 0.974
 Average F1 across users: 0.966
 ==================================== PART 2 =======================================================
 
+Model Summary:
+Model: "sequential"
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┓
+┃ Layer (type)                         ┃ Output Shape                ┃         Param # ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━┩
+│ conv1d (Conv1D)                      │ (None, 126, 64)             │           1,792 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ conv1d_1 (Conv1D)                    │ (None, 124, 64)             │          12,352 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ max_pooling1d (MaxPooling1D)         │ (None, 62, 64)              │               0 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ dropout (Dropout)                    │ (None, 62, 64)              │               0 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ flatten (Flatten)                    │ (None, 3968)                │               0 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ dense (Dense)                        │ (None, 100)                 │         396,900 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ dense_1 (Dense)                      │ (None, 6)                   │             606 │
+└──────────────────────────────────────┴─────────────────────────────┴─────────────────┘
+ Total params: 411,650 (1.57 MB)
+ Trainable params: 411,650 (1.57 MB)
+ Non-trainable params: 0 (0.00 B)
+
+=== Manual Evaluation Metrics (Aggregate DNN) ===
+Precision (weighted): 0.914
+Recall (weighted):    0.913
+F1-score (weighted):  0.913
+
+Confusion Matrix (Labels 0-5):
+     0    1    2    3    4    5
+0  476    0   20    0    0    0
+1   16  433   22    0    0    0
+2    0    1  419    0    0    0
+3    0    2    0  396   88    5
+4    0    1    0   64  467    0
+5    0   36    0    0    0  501
 
 
+=== Running Individual User-Specific 1D-CNN Classifiers ===
+Total users: 30
+
+--- User 1 ---
+Training 1D-CNN for user 1 (277 samples)...
+Manual  -> Precision: 0.927, Recall: 0.900, F1: 0.881
+
+--- User 2 ---
+Training 1D-CNN for user 2 (241 samples)...
+Manual  -> Precision: 0.955, Recall: 0.951, F1: 0.951
+
+--- User 3 ---
+Training 1D-CNN for user 3 (272 samples)...
+Manual  -> Precision: 1.000, Recall: 1.000, F1: 1.000
+
+--- User 4 ---
+Training 1D-CNN for user 4 (253 samples)...
+Manual  -> Precision: 0.939, Recall: 0.922, F1: 0.921
+
+--- User 5 ---
+Training 1D-CNN for user 5 (241 samples)...
+Manual  -> Precision: 0.945, Recall: 0.934, F1: 0.933
+
+--- User 6 ---
+Training 1D-CNN for user 6 (260 samples)...
+Manual  -> Precision: 0.923, Recall: 0.892, F1: 0.888
+
+--- User 7 ---
+Training 1D-CNN for user 7 (246 samples)...
+Manual  -> Precision: 0.906, Recall: 0.903, F1: 0.899
+
+--- User 8 ---
+Training 1D-CNN for user 8 (224 samples)...
+Manual  -> Precision: 0.839, Recall: 0.842, F1: 0.838
+
+--- User 9 ---
+Training 1D-CNN for user 9 (230 samples)...
+Manual  -> Precision: 0.797, Recall: 0.759, F1: 0.723
+
+--- User 10 ---
+Training 1D-CNN for user 10 (235 samples)...
+Manual  -> Precision: 0.819, Recall: 0.797, F1: 0.787
+
+--- User 11 ---
+Training 1D-CNN for user 11 (252 samples)...
+Manual  -> Precision: 0.986, Recall: 0.984, F1: 0.984
+
+--- User 12 ---
+Training 1D-CNN for user 12 (256 samples)...
+Manual  -> Precision: 0.788, Recall: 0.766, F1: 0.771
+
+--- User 13 ---
+Training 1D-CNN for user 13 (261 samples)...
+Manual  -> Precision: 0.907, Recall: 0.894, F1: 0.896
+
+--- User 14 ---
+Training 1D-CNN for user 14 (258 samples)...
+Manual  -> Precision: 0.946, Recall: 0.938, F1: 0.937
+
+--- User 15 ---
+Training 1D-CNN for user 15 (262 samples)...
+Manual  -> Precision: 0.974, Recall: 0.970, F1: 0.969
+
+--- User 16 ---
+Training 1D-CNN for user 16 (292 samples)...
+Manual  -> Precision: 0.936, Recall: 0.919, F1: 0.916
+
+--- User 17 ---
+Training 1D-CNN for user 17 (294 samples)...
+Manual  -> Precision: 0.946, Recall: 0.919, F1: 0.907
+
+--- User 18 ---
+Training 1D-CNN for user 18 (291 samples)...
+Manual  -> Precision: 0.960, Recall: 0.945, F1: 0.946
+
+--- User 19 ---
+Training 1D-CNN for user 19 (288 samples)...
+Manual  -> Precision: 0.972, Recall: 0.972, F1: 0.972
+
+--- User 20 ---
+Training 1D-CNN for user 20 (283 samples)...
+Manual  -> Precision: 0.887, Recall: 0.887, F1: 0.881
+
+--- User 21 ---
+Training 1D-CNN for user 21 (326 samples)...
+Manual  -> Precision: 0.979, Recall: 0.976, F1: 0.975
+
+--- User 22 ---
+Training 1D-CNN for user 22 (256 samples)...
+Manual  -> Precision: 0.928, Recall: 0.923, F1: 0.925
+
+--- User 23 ---
+Training 1D-CNN for user 23 (297 samples)...
+Manual  -> Precision: 0.864, Recall: 0.840, F1: 0.834
+
+--- User 24 ---
+Training 1D-CNN for user 24 (304 samples)...
+Manual  -> Precision: 0.935, Recall: 0.935, F1: 0.935
+
+--- User 25 ---
+Training 1D-CNN for user 25 (327 samples)...
+Manual  -> Precision: 0.971, Recall: 0.963, F1: 0.964
+
+--- User 26 ---
+Training 1D-CNN for user 26 (313 samples)...
+Manual  -> Precision: 0.955, Recall: 0.937, F1: 0.936
+
+--- User 27 ---
+Training 1D-CNN for user 27 (300 samples)...
+Manual  -> Precision: 0.962, Recall: 0.961, F1: 0.961
+
+--- User 28 ---
+Training 1D-CNN for user 28 (305 samples)...
+Manual  -> Precision: 0.821, Recall: 0.779, F1: 0.767
+
+--- User 29 ---
+Training 1D-CNN for user 29 (275 samples)...
+Manual  -> Precision: 1.000, Recall: 1.000, F1: 1.000
+
+--- User 30 ---
+Training 1D-CNN for user 30 (306 samples)...
+Manual  -> Precision: 0.988, Recall: 0.987, F1: 0.987
+
+=== Summary Per User (DNN) ===
+    User  Precision    Recall        F1
+0      1   0.926923  0.900000  0.880855
+1      2   0.955359  0.950820  0.950620
+2      3   1.000000  1.000000  1.000000
+3      4   0.938702  0.921875  0.920823
+4      5   0.944515  0.934426  0.933288
+5      6   0.923177  0.892308  0.888163
+6      7   0.905844  0.903226  0.899267
+7      8   0.839181  0.842105  0.838460
+8      9   0.796503  0.758621  0.722504
+9     10   0.819058  0.796610  0.787121
+10    11   0.985938  0.984375  0.984447
+11    12   0.787527  0.765625  0.770881
+12    13   0.906866  0.893939  0.895502
+13    14   0.945661  0.938462  0.937064
+14    15   0.974359  0.969697  0.968795
+15    16   0.936235  0.918919  0.916106
+16    17   0.945946  0.918919  0.906757
+17    18   0.959817  0.945205  0.945878
+18    19   0.972222  0.972222  0.972222
+19    20   0.887431  0.887324  0.880617
+20    21   0.979362  0.975610  0.975102
+21    22   0.927692  0.923077  0.924509
+22    23   0.864470  0.840000  0.834418
+23    24   0.935465  0.935065  0.934818
+24    25   0.971254  0.963415  0.963577
+25    26   0.955324  0.936709  0.935534
+26    27   0.961722  0.960526  0.960608
+27    28   0.821299  0.779221  0.767003
+28    29   1.000000  1.000000  1.000000
+29    30   0.987941  0.987013  0.986994
+
+Average F1 across users: 0.909
 
 ==================================== PART 3 =======================================================
 Implemented three perceptrons: OR, NAND, AND.

@@ -9,8 +9,9 @@ from pathlib import Path
 from sklearn.base import BaseEstimator, ClassifierMixin # Allows integration with sklearn tools (in our case cross_val_score)
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv1D, MaxPooling1D, Flatten, Dense, Dropout
+from keras.models import Sequential
+from keras.layers import Conv1D, MaxPooling1D, Flatten, Dense, Dropout
+import warnings
 
 '''
 Part 1:
@@ -345,7 +346,7 @@ def build_cnn_model(input_shape=(128, 9), n_classes=6):
 def dnn_for_aggregate_data(base_path, epochs=10, batch_size=32):
     print("=== 1D-CNN Classifier For Aggregate Raw Data ===")
     X_train, X_test, y_train, y_test = load_har_raw_dataset(base_path)
-    print(f"Train: {X_train.shape}, Test: {X_test.shape}")
+    # print(f"Train: {X_train.shape}, Test: {X_test.shape}")
 
     n_classes = len(np.unique(y_train)) # Should be 6 (0-5)
     input_shape = X_train.shape[1:]     # Should be (128, 9)
@@ -354,7 +355,7 @@ def dnn_for_aggregate_data(base_path, epochs=10, batch_size=32):
     print("\nModel Summary:")
     model.summary()
     
-    print(f"\nTraining 1D-CNN for {epochs} epochs...")
+    # print(f"\nTraining 1D-CNN for {epochs} epochs...")
     # Train the model, holding out 20% of training data for validation
     model.fit(
         X_train, y_train,
@@ -364,9 +365,9 @@ def dnn_for_aggregate_data(base_path, epochs=10, batch_size=32):
         verbose=0 # Show progress bar
     )
     
-    print("\nEvaluating on test set...")
+    # print("\nEvaluating on test set...")
     # Get probabilities for each class
-    y_pred_probs = model.predict(X_test)
+    y_pred_probs = model.predict(X_test, verbose=0)
     # Get the class with the highest probability
     y_pred = np.argmax(y_pred_probs, axis=1) 
     
@@ -437,7 +438,7 @@ def dnn_per_user(base_path, epochs=5, batch_size=32):
             verbose=0 # Quieter output inside the loop
         )
         
-        y_pred_probs = model.predict(X_test)
+        y_pred_probs = model.predict(X_test, verbose=0)
         y_pred = np.argmax(y_pred_probs, axis=1)
         
         manual_precision, manual_recall, manual_f1, _ = compute_weighted_metrics(y_test, y_pred)
@@ -484,16 +485,18 @@ if __name__ == "__main__":
     # Path to UCI HAR Dataset folder
     base_path = Path("./UCI HAR Dataset")
 
-    print("\n===Part 1===\n")
+    # print("\n===Part 1===\n")
 
-    X_train, X_test, y_train, y_test = load_har_aggregate_dataset(base_path)
-    best_k = find_best_k(X_train, y_train) # We found the best k by cross-validation
-    knn_for_aggregate_data(base_path, k=best_k) 
+    # X_train, X_test, y_train, y_test = load_har_aggregate_dataset(base_path)
+    # best_k = find_best_k(X_train, y_train) # We found the best k by cross-validation
+    # knn_for_aggregate_data(base_path, k=best_k) 
 
-    user_df = load_har_user_dataset(base_path)     
-    knn_per_user(user_df, k=5) # We chose the best k by trying k manually for user-specific (individual) data
+    # user_df = load_har_user_dataset(base_path)     
+    # knn_per_user(user_df, k=5) # We chose the best k by trying k manually for user-specific (individual) data
 
     print("\n===Part 2===\n")
+
+    warnings.filterwarnings("ignore", category=UserWarning) # Suppress TensorFlow warnings for cleaner output
 
     # Note: DNN training can be slow!
     # Set epochs to 1 or 2 for a quick test, 10-20 for a real run.
@@ -501,28 +504,28 @@ if __name__ == "__main__":
     dnn_for_aggregate_data(base_path, epochs=dnn_epochs)
     
     # User-specific models train on less data, can use fewer epochs
-    dnn_user_epochs = 5
+    dnn_user_epochs = 6
     dnn_per_user(base_path, epochs=dnn_user_epochs)
 
-    print("\n===Part 3===\n")
+    # print("\n===Part 3===\n")
 
-    # Training data for XOR
-    X = np.array([[0,0],[0,1],[1,0],[1,1]])
+    # # Training data for XOR
+    # X = np.array([[0,0],[0,1],[1,0],[1,1]])
 
-    # Train OR perceptron
-    y_or = np.array([0,1,1,1])
-    w_or, b_or = train_perceptron(X, y_or)
+    # # Train OR perceptron
+    # y_or = np.array([0,1,1,1])
+    # w_or, b_or = train_perceptron(X, y_or)
 
-    # Train NAND perceptron
-    y_nand = np.array([1,1,1,0])
-    w_nand, b_nand = train_perceptron(X, y_nand)
+    # # Train NAND perceptron
+    # y_nand = np.array([1,1,1,0])
+    # w_nand, b_nand = train_perceptron(X, y_nand)
 
-    # Train AND perceptron (used to combine OR and NAND outputs)
-    y_and = np.array([0,0,0,1])
-    w_and, b_and = train_perceptron(np.array([[0,0],[0,1],[1,0],[1,1]]), y_and)
+    # # Train AND perceptron (used to combine OR and NAND outputs)
+    # y_and = np.array([0,0,0,1])
+    # w_and, b_and = train_perceptron(np.array([[0,0],[0,1],[1,0],[1,1]]), y_and)
 
-    # Display results in a table
-    print("Input A | Input B | XOR Output")
-    print("-----------------------------")
-    for xi in X:
-        print(f"   {xi[0]}    |    {xi[1]}    |     {xor(xi)}")
+    # # Display results in a table
+    # print("Input A | Input B | XOR Output")
+    # print("-----------------------------")
+    # for xi in X:
+    #     print(f"   {xi[0]}    |    {xi[1]}    |     {xor(xi)}")
