@@ -15,7 +15,7 @@ Make sure you are in the same directory as your requirements.txt
 ==================================== PART 1 =======================================================
 Aggregate KNN
 Goal: Evaluate activity recognition across all users combined.
-Method: 5-fold cross-validation was performed on the training set to determine the optimal number of neighbors (k), testing values from 1 to 20.
+Method: 5-fold cross-validation was performed on the training set to determine the optimal number of neighbors (k), testing values from 1 to 10.
 Training: The KNN classifier was trained on the aggregated data from all subjects using the best k.
 Evaluation: The model was evaluated on the test set. Precision, recall, and F1-score were computed manually (without using built-in metric functions), along with the confusion matrix for detailed performance analysis.
 
@@ -27,38 +27,37 @@ Parameter tuning: Since user-specific datasets are much smaller, cross-validatio
 Terminal Output:
 ===Part 1===
 
-Finding best k using validation fold:
-k =  1 → validation F1 = 0.9660
-k =  2 → validation F1 = 0.9572
-k =  3 → validation F1 = 0.9660
-k =  4 → validation F1 = 0.9606
-k =  5 → validation F1 = 0.9659
-k =  6 → validation F1 = 0.9619
-k =  7 → validation F1 = 0.9611
-k =  8 → validation F1 = 0.9633
-k =  9 → validation F1 = 0.9605
-k = 10 → validation F1 = 0.9633
+k =  1 → Mean F1-score = 0.8739
+k =  2 → Mean F1-score = 0.8635
+k =  3 → Mean F1-score = 0.8858
+k =  4 → Mean F1-score = 0.8852
+k =  5 → Mean F1-score = 0.8893
+k =  6 → Mean F1-score = 0.8889
+k =  7 → Mean F1-score = 0.8937
+k =  8 → Mean F1-score = 0.8935
+k =  9 → Mean F1-score = 0.8929
+k = 10 → Mean F1-score = 0.8922
 
-Picked best k = 1 (Validation F1 = 0.9660)
+Picked best k = 7 (Validation F1 = 0.8937)
 
 === Manual KNN Classifier For Aggregate Data ===
 Train: (7352, 561), Test: (2947, 561)
 
-Training manual KNN with k = 1...
+Training manual KNN with k = 7...
 
 === Manual Evaluation Metrics (Aggregate) ===
-Precision (weighted): 0.880
-Recall (weighted):    0.879
-F1-score (weighted):  0.878
+Precision (weighted): 0.908
+Recall (weighted):    0.903
+F1-score (weighted):  0.903
 
 Confusion Matrix:
      1    2    3    4    5    6
-1  473    8   15    0    0    0
-2   31  422   18    0    0    0
-3   53   46  321    0    0    0
-4    0    2    0  389   99    1
-5    0    0    0   81  451    0
-6    0    0    0    3    1  533
+1  482    3   11    0    0    0
+2   42  423    6    0    0    0
+3   48   40  332    0    0    0
+4    0    4    0  394   93    0
+5    0    0    0   35  497    0
+6    0    0    0    2    1  534
 
 === Running Individual User-Specific KNN Classifiers ===
 
@@ -241,4 +240,5 @@ Input A | Input B | XOR Output
    0    |    1    |     1
    1    |    0    |     1
    1    |    1    |     0
+
 
