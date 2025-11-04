@@ -485,14 +485,14 @@ if __name__ == "__main__":
     # Path to UCI HAR Dataset folder
     base_path = Path("./UCI HAR Dataset")
 
-    # print("\n===Part 1===\n")
+    print("\n===Part 1===\n")
 
-    # X_train, X_test, y_train, y_test = load_har_aggregate_dataset(base_path)
-    # best_k = find_best_k(X_train, y_train) # We found the best k by cross-validation
-    # knn_for_aggregate_data(base_path, k=best_k) 
+    X_train, X_test, y_train, y_test = load_har_aggregate_dataset(base_path)
+    best_k = find_best_k(X_train, y_train) # We found the best k by cross-validation
+    knn_for_aggregate_data(base_path, k=best_k) 
 
-    # user_df = load_har_user_dataset(base_path)     
-    # knn_per_user(user_df, k=5) # We chose the best k by trying k manually for user-specific (individual) data
+    user_df = load_har_user_dataset(base_path)     
+    knn_per_user(user_df, k=5) # We chose the best k by trying k manually for user-specific (individual) data
 
     print("\n===Part 2===\n")
 
@@ -507,25 +507,25 @@ if __name__ == "__main__":
     dnn_user_epochs = 6
     dnn_per_user(base_path, epochs=dnn_user_epochs)
 
-    # print("\n===Part 3===\n")
+    print("\n===Part 3===\n")
 
-    # # Training data for XOR
-    # X = np.array([[0,0],[0,1],[1,0],[1,1]])
+    # Training data for XOR
+    X = np.array([[0,0],[0,1],[1,0],[1,1]])
 
-    # # Train OR perceptron
-    # y_or = np.array([0,1,1,1])
-    # w_or, b_or = train_perceptron(X, y_or)
+    # Train OR perceptron
+    y_or = np.array([0,1,1,1])
+    w_or, b_or = train_perceptron(X, y_or)
 
-    # # Train NAND perceptron
-    # y_nand = np.array([1,1,1,0])
-    # w_nand, b_nand = train_perceptron(X, y_nand)
+    # Train NAND perceptron
+    y_nand = np.array([1,1,1,0])
+    w_nand, b_nand = train_perceptron(X, y_nand)
 
-    # # Train AND perceptron (used to combine OR and NAND outputs)
-    # y_and = np.array([0,0,0,1])
-    # w_and, b_and = train_perceptron(np.array([[0,0],[0,1],[1,0],[1,1]]), y_and)
+    # Train AND perceptron (used to combine OR and NAND outputs)
+    y_and = np.array([0,0,0,1])
+    w_and, b_and = train_perceptron(np.array([[0,0],[0,1],[1,0],[1,1]]), y_and)
 
-    # # Display results in a table
-    # print("Input A | Input B | XOR Output")
-    # print("-----------------------------")
-    # for xi in X:
-    #     print(f"   {xi[0]}    |    {xi[1]}    |     {xor(xi)}")
+    # Display results in a table
+    print("Input A | Input B | XOR Output")
+    print("-----------------------------")
+    for xi in X:
+        print(f"   {xi[0]}    |    {xi[1]}    |     {xor(xi)}")
