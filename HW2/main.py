@@ -262,7 +262,7 @@ if __name__ == "__main__":
     print("\n===Part 1===\n")
 
     X_train, X_test, y_train, y_test = load_har_aggregate_dataset(base_path)
-    best_k = find_best_k(X_train, y_train) # We found the best k by cross-validation
+    best_k = find_best_k(X_train, y_train) # We found the best k using validation fold
     knn_for_aggregate_data(base_path, k=best_k) 
 
     user_df = load_har_user_dataset(base_path)     
@@ -295,4 +295,5 @@ if __name__ == "__main__":
     print("-----------------------------")
     for xi in X:
         print(f"   {xi[0]}    |    {xi[1]}    |     {xor(xi)}")
+
 
