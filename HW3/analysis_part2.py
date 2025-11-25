@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import os.path
 
 df = pd.read_csv("latency_part2.csv")
 
