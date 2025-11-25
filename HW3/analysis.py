@@ -1,7 +1,17 @@
 import pandas as pd
 import numpy as np
+import os.path
 
-df = pd.read_csv("C:/Users/artun/latency_log.csv")
+def get_file_path():
+    path=input("Please enter the relative or absolute path of the csv file for analysis: ")
+    while not os.path.exists(path):
+        print(f"The file {path} does not exist. Please try again!")
+        path=input("Please enter the relative or absolute path of the csv file for analysis: ")
+    return path
+
+df = pd.read_csv(get_file_path())
+# file_path="C:/Users/artun/latency_log.csv"
+# df = pd.read_csv(file_path)
 avg_latency = df['latency_server_calc'].dropna().mean()
 print(f"Average latency (s): {avg_latency:.2f}") # This gives the average latency per frame
 

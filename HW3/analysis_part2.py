@@ -1,7 +1,17 @@
 import pandas as pd
 import numpy as np
+import os.path
 
-df = pd.read_csv("C:/Users/suuser/Desktop/IoT_HW3/latency_part2.csv")
+def get_file_path():
+    path=input("Please enter the relative or absolute path of the csv file for analysis: ")
+    while not os.path.exists(path):
+        print(f"The file {path} does not exist. Please try again!")
+        path=input("Please enter the relative or absolute path of the csv file for analysis: ")
+    return path
+
+df = pd.read_csv(get_file_path())
+# file_path="C:/Users/suuser/Desktop/IoT_HW3/latency_part2.csv"
+# df = pd.read_csv(file_path)
 
 df['total_latency'] = df['inference_time'] + df['rtt_seconds']
 avg_latency = df['total_latency'].dropna().mean()
