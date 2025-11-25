@@ -19,7 +19,7 @@ except ImportError:
 ### Configuration (change as necessary) ###
 SERVER_IP = "http://10.165.66.45:8080"  # change this as necessary. maybe actually allow this to be user input?
 SERVER_URL = SERVER_IP + "/infer"
-MODEL_PATH = "model.tflite"
+MODEL_PATH = "yolov8n_float32.tflite"
 CONF_THRESHOLD = 0.45 # confidence threshold
 INTERVAL = 0.0 # set this variable as necessary to make the device sleep for a certain time in seconds (Seconds between frames) (Can also use for debugging purposes)
 LOG_FILE = "latency_log_part2.csv"
