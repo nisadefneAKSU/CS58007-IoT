@@ -1,4 +1,3 @@
-import argparse
 import csv
 import time
 import requests
@@ -124,7 +123,7 @@ fps_frame_counter = 0
 current_fps = 0.0
 
 # Prepare the CSV log file
-fieldnames = ["frame_idx", "capture_ts", "t_proc_start", "t_proc_end", "proc_latency", "rtt_seconds", "people"]
+fieldnames = ["frame_idx", "capture_ts", "proc_latency", "current_fps", "rtt_seconds", "people"]
 csvfile = open(LOG_FILE, "w", newline="")
 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 writer.writeheader()
@@ -165,9 +164,8 @@ try:
             writer.writerow({
             "frame_idx": frame_idx,
             "capture_ts": capture_ts,
-            "t_proc_start": t_proc_start,
-            "t_proc_end": t_proc_end,
             "proc_latency": proc_latency,
+            "current_fps": current_fps
             "rtt_seconds": rtt,
             "people": people_count
             })

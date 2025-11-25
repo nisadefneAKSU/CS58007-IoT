@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import threading
 
-# --- Configuration ---
+# Configuration variables. Change as necessary
 SERVER_IP = "http://10.165.66.45:8080"
 SERVER_URL = SERVER_IP + "/infer"
 CAMERA_ID = 0
@@ -52,11 +52,11 @@ class CameraStream:
         self.stopped = True
         self.stream.release()
 
-# --- Setup CSV logging ---
-csv_file = open("latency_data.csv", "w", newline="")
+# csv logging
+csv_file = open("latency_log_part1.csv", "w", newline="")
 writer = csv.writer(csv_file)
 # Added columns for FPS data
-writer.writerow(["frame", "capture_ts", "rtt", "server_latency", "people", "actual_fps", "server_capacity_fps"])
+writer.writerow(["frame", "capture_ts", "rtt", "server_latency", "people", "current_fps"])
 
 # --- Clock Sync Function ---
 def sync_clock(server_ip):
