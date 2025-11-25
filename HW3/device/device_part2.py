@@ -1,3 +1,5 @@
+import argparse
+import csv
 import time
 import requests
 import cv2
@@ -14,14 +16,14 @@ except ImportError:
         print("Error: Install tflite-runtime or tensorflow")
         exit()
 
-# --- CONFIGURATION ---
-SERVER_IP = "http://10.165.66.45:8080"  # <--- CHANGE THIS
+### Configuration (change as necessary) ###
+SERVER_IP = "http://10.165.66.45:8080"  # change this as necessary. maybe actually allow this to be user input?
 SERVER_URL = SERVER_IP + "/infer"
 MODEL_PATH = "model.tflite"
-CONF_THRESHOLD = 0.45
-INTERVAL = 0.0
+CONF_THRESHOLD = 0.45 # confidence threshold
+INTERVAL = 0.0 # set this variable as necessary to make the device sleep for a certain time in seconds (Seconds between frames) (Can also use for debugging purposes)
+LOG_FILE = "latency_log_part2.csv"
 
-# --- 1. The Detector ---
 class YOLO_TFLite:
     def __init__(self, model_path):
         print(f"Loading Model: {model_path}")
@@ -56,7 +58,6 @@ class YOLO_TFLite:
         
         return int(count), float(max_score)
 
-# --- 2. Camera Stream ---
 class CameraStream:
     def __init__(self, src=0):
         self.stream = cv2.VideoCapture(src, cv2.CAP_V4L2)
@@ -91,7 +92,6 @@ class CameraStream:
         self.stopped = True
         self.stream.release()
 
-# --- 3. Sync & Loop ---
 session = requests.Session()
 def sync_clock(server_ip):
     print("Synchronizing clocks...")
@@ -109,7 +109,6 @@ def sync_clock(server_ip):
         print(f"  > Sync failed: {e}")
     return 0.0
 
-# --- MAIN LOOP ---
 detector = YOLO_TFLite(MODEL_PATH)
 
 print("Starting Camera...")
@@ -119,41 +118,40 @@ time.sleep(2.0)
 time_offset = sync_clock(SERVER_IP)
 frame_idx = 0
 
-# --- VARIABLES FOR FPS CALCULATION ---
+# fps calculation
 fps_start_time = time.time()
 fps_frame_counter = 0
 current_fps = 0.0
 
+# Prepare the CSV log file
+fieldnames = ["frame_idx", "capture_ts", "t_proc_start", "t_proc_end", "proc_latency", "rtt_seconds", "people"]
+csvfile = open(LOG_FILE, "w", newline="")
+writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+writer.writeheader()
+
+
 try:
     while True:
-        # 1. Capture
+        # Capture
         frame = cam.read()
         if frame is None:
             time.sleep(0.01)
             continue
             
         capture_ts = time.time() + time_offset
-        
-        # --- MEASURE PROCESSING LATENCY ---
         t_proc_start = time.time()
-        
-        # 2. Run AI
         people_count, max_conf = detector.detect(frame)
-        
         t_proc_end = time.time()
-        # Latency = Time taken to Resize + Preprocess + Inference
-        proc_latency = t_proc_end - t_proc_start 
-        # ----------------------------------
+        proc_latency = t_proc_end - t_proc_start # latency = time taken to resize+preprocess+infer
 
-        # --- CALCULATE FPS ---
         fps_frame_counter += 1
-        if (time.time() - fps_start_time) > 1.0:
-            current_fps = fps_frame_counter / (time.time() - fps_start_time)
+        rtt=time.time() - fps_start_time
+        if (rtt) > 1.0:
+            current_fps = fps_frame_counter / (rtt)
             fps_frame_counter = 0
             fps_start_time = time.time()
-        # ---------------------
 
-        # Send Data
+        # Try Send Data
         try:
             payload = {
                 "people": people_count,
@@ -164,7 +162,17 @@ try:
             
             session.post(SERVER_URL, json=payload, timeout=2.0)
             
-            # Updated Print Statement
+            writer.writerow({
+            "frame_idx": frame_idx,
+            "capture_ts": capture_ts,
+            "t_proc_start": t_proc_start,
+            "t_proc_end": t_proc_end,
+            "proc_latency": proc_latency,
+            "rtt_seconds": rtt,
+            "people": people_count
+            })
+            csvfile.flush()
+            
             print(f"FPS: {current_fps:.1f} | Latency: {proc_latency:.3f}s | People: {people_count}")
             
         except Exception as e:
@@ -177,3 +185,4 @@ except KeyboardInterrupt:
     print("\nStopping...")
     cam.stop()
     session.close()
+    csvfile.close()
