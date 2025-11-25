@@ -3,7 +3,7 @@ import numpy as np
 import os.path
 
 def get_file_path():
-    path=input("Please enter the relative or absolute path of the csv file for analysis: ")
+    path=input("Please enter the relative or absolute path of the csv file for analysis: ").strip('"')
     while not os.path.exists(path):
         print(f"The file {path} does not exist. Please try again!")
         path=input("Please enter the relative or absolute path of the csv file for analysis: ")
