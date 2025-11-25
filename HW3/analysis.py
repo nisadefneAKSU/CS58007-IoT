@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-df = pd.read_csv("C:/Users/artun/latency_log.csv")
+df = pd.read_csv("latency_log.csv")
 avg_latency = df['latency_server_calc'].dropna().mean()
 print(f"Average latency (s): {avg_latency:.2f}") # This gives the average latency per frame
 

@@ -1,135 +1,179 @@
-# device_part2.py
 import time
-import csv
-import argparse
 import requests
 import cv2
-from ultralytics import YOLO
+import numpy as np
+import threading
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--server", default="http://127.0.0.1/upload_count",
-                    help="Server upload_count URL (include /upload_count)")
-parser.add_argument("--camera", type=int, default=0, help="Camera index")
-parser.add_argument("--interval", type=float, default=0.0,
-                    help="Seconds between frames (0.0 -> run as fast as possible)")
-parser.add_argument("--out", default="latency_part2.csv", help="CSV log file")
-parser.add_argument("--max_frames", type=int, default=0,
-                    help="Stop after this many frames (0 = infinite)")
-parser.add_argument("--conf", type=float, default=0.25, help="YOLO confidence threshold")
-args = parser.parse_args()
+# Import TFLite
+try:
+    import tflite_runtime.interpreter as tflite
+except ImportError:
+    try:
+        import tensorflow.lite as tflite
+    except ImportError:
+        print("Error: Install tflite-runtime or tensorflow")
+        exit()
 
-SERVER_URL = args.server
+# --- CONFIGURATION ---
+SERVER_IP = "http://10.165.66.45:8080"  # <--- CHANGE THIS
+SERVER_URL = SERVER_IP + "/infer"
+MODEL_PATH = "model.tflite"
+CONF_THRESHOLD = 0.45
+INTERVAL = 0.0
 
-# Load Tiny YOLO (lightweight)
-print("Loading YOLO model (device) ...")
-model = YOLO("yolov8n.pt")  # yolov8n is small; replace if you have different tiny model
+# --- 1. The Detector ---
+class YOLO_TFLite:
+    def __init__(self, model_path):
+        print(f"Loading Model: {model_path}")
+        self.interpreter = tflite.Interpreter(model_path=model_path)
+        self.interpreter.allocate_tensors()
+        
+        self.input_details = self.interpreter.get_input_details()
+        self.output_details = self.interpreter.get_output_details()
+        
+        self.input_shape = self.input_details[0]['shape']
+        self.h = self.input_shape[1]
+        self.w = self.input_shape[2]
+        print(f"Model Expects: {self.w}x{self.h} | Type: Float32")
 
-# Initialize webcam
+    def detect(self, image):
+        img_resized = cv2.resize(image, (self.w, self.h))
+        img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
+        input_data = (img_rgb / 255.0).astype(np.float32)
+        input_data = np.expand_dims(input_data, axis=0)
+        
+        self.interpreter.set_tensor(self.input_details[0]['index'], input_data)
+        self.interpreter.invoke()
+        
+        output_data = self.interpreter.get_tensor(self.output_details[0]['index'])[0]
+        
+        if output_data.shape[0] < output_data.shape[1]:
+            output_data = output_data.T
 
-# Bende kaspersky yüzünden kamera çalışmıyordu, başka bilgisayar da yoktu
-# bu yüzden video kullandım:
+        scores = output_data[:, 4] 
+        max_score = np.max(scores)
+        count = np.sum(scores > CONF_THRESHOLD)
+        
+        return int(count), float(max_score)
 
-cap = cv2.VideoCapture(r"C:\Users\suuser\Desktop\IoT_HW3\test_video_fixed.mp4")
-if not cap.isOpened():
-    raise SystemExit("Cannot open video file")
+# --- 2. Camera Stream ---
+class CameraStream:
+    def __init__(self, src=0):
+        self.stream = cv2.VideoCapture(src, cv2.CAP_V4L2)
+        self.stream.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        self.stream.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        
+        if not self.stream.isOpened():
+            print("Error: Camera failed to open.")
+            exit()
+            
+        (self.grabbed, self.frame) = self.stream.read()
+        self.stopped = False
 
-# Kamera için şununla test edin pls:
-# cap = cv2.VideoCapture(args.camera)
+    def start(self):
+        threading.Thread(target=self.update, args=(), daemon=True).start()
+        return self
 
-# Şu resolution olabilir:
+    def update(self):
+        while not self.stopped:
+            (grabbed, frame) = self.stream.read()
+            if grabbed:
+                self.frame = frame
+                self.grabbed = True
+            else:
+                self.grabbed = False
+                time.sleep(0.01)
 
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    def read(self):
+        return self.frame
 
-# CSV setup
-fieldnames = [
-    "frame_idx",
-    "capture_ts",
-    "inference_start_ts",
-    "inference_end_ts",
-    "inference_time",
-    "client_send_ts",
-    "server_response_ts",
-    "rtt_seconds",
-    "people"
-]
-csvfile = open(args.out, "w", newline="")
-writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-writer.writeheader()
+    def stop(self):
+        self.stopped = True
+        self.stream.release()
 
+# --- 3. Sync & Loop ---
+session = requests.Session()
+def sync_clock(server_ip):
+    print("Synchronizing clocks...")
+    try:
+        t0 = time.time()
+        response = session.get(f"{server_ip}/time", timeout=5)
+        t1 = time.time()
+        if response.status_code == 200:
+            server_ts = response.json().get("server_ts", 0)
+            rtt = t1 - t0
+            offset = server_ts - (t1 - (rtt / 2))
+            print(f"  > Time Offset: {offset:.4f}s")
+            return offset
+    except Exception as e:
+        print(f"  > Sync failed: {e}")
+    return 0.0
+
+# --- MAIN LOOP ---
+detector = YOLO_TFLite(MODEL_PATH)
+
+print("Starting Camera...")
+cam = CameraStream(0).start()
+time.sleep(2.0)
+
+time_offset = sync_clock(SERVER_IP)
 frame_idx = 0
+
+# --- VARIABLES FOR FPS CALCULATION ---
+fps_start_time = time.time()
+fps_frame_counter = 0
+current_fps = 0.0
+
 try:
     while True:
-        if args.max_frames and frame_idx >= args.max_frames:
-            break
+        # 1. Capture
+        frame = cam.read()
+        if frame is None:
+            time.sleep(0.01)
+            continue
+            
+        capture_ts = time.time() + time_offset
+        
+        # --- MEASURE PROCESSING LATENCY ---
+        t_proc_start = time.time()
+        
+        # 2. Run AI
+        people_count, max_conf = detector.detect(frame)
+        
+        t_proc_end = time.time()
+        # Latency = Time taken to Resize + Preprocess + Inference
+        proc_latency = t_proc_end - t_proc_start 
+        # ----------------------------------
 
-        ret, frame = cap.read()
-        if not ret:
-            print("Failed to read frame")
-            break
+        # --- CALCULATE FPS ---
+        fps_frame_counter += 1
+        if (time.time() - fps_start_time) > 1.0:
+            current_fps = fps_frame_counter / (time.time() - fps_start_time)
+            fps_frame_counter = 0
+            fps_start_time = time.time()
+        # ---------------------
 
-        # capture timestamp
-        capture_ts = time.time()
-
-        # run local Tiny YOLO inference (only persons)
-        inf_start = time.time()
-        # request only class 0 (person) for speed
-        results = model(frame, conf=args.conf, classes=[0], imgsz=640)
-        inf_end = time.time()
-        inference_time = inf_end - inf_start
-
-        # count people (results[0].boxes may be None)
-        people_count = 0
-        if len(results) > 0:
-            boxes = results[0].boxes
-            if boxes is not None:
-                # boxes is an array, number of boxes = people
-                try:
-                    people_count = len(boxes)
-                except:
-                    # fallback: use .xyxy or .boxes.xyxy
-                    people_count = 0
-
-        # 3) POST the small JSON with the count
-        client_send_ts = time.time()
-        json_payload = {"people": int(people_count), "capture_ts": capture_ts}
-        t0 = time.time()
+        # Send Data
         try:
-            resp = requests.post(SERVER_URL, json=json_payload, timeout=5.0)
-            t1 = time.time()
-            rtt = t1 - t0
-            server_response_ts = t1
+            payload = {
+                "people": people_count,
+                "capture_ts": capture_ts,
+                "max_conf": max_conf,
+                "proc_latency": proc_latency  # Sending latency to server too
+            }
+            
+            session.post(SERVER_URL, json=payload, timeout=2.0)
+            
+            # Updated Print Statement
+            print(f"FPS: {current_fps:.1f} | Latency: {proc_latency:.3f}s | People: {people_count}")
+            
         except Exception as e:
-            print(f"POST failed: {e}")
-            rtt = None
-            server_response_ts = None
-            # still log locally
-            resp = None
-
-        # 4) write CSV row
-        writer.writerow({
-            "frame_idx": frame_idx,
-            "capture_ts": capture_ts,
-            "inference_start_ts": inf_start,
-            "inference_end_ts": inf_end,
-            "inference_time": inference_time,
-            "client_send_ts": client_send_ts,
-            "server_response_ts": server_response_ts,
-            "rtt_seconds": rtt,
-            "people": int(people_count)
-        })
-        csvfile.flush()
-
-        # 5) print readable status
-        rtt_str = f"{rtt:.3f}s" if rtt is not None else "N/A"
-        print(f"[{frame_idx}] people={people_count} inf={inference_time:.3f}s rtt={rtt_str}")
-
+            print(f"Net Error: {e}")
+            
         frame_idx += 1
-        if args.interval > 0:
-            time.sleep(args.interval)
+        if INTERVAL > 0: time.sleep(INTERVAL)
 
 except KeyboardInterrupt:
-    print("Stopping capture")
-finally:
-    cap.release()
-    csvfile.close()
+    print("\nStopping...")
+    cam.stop()
+    session.close()

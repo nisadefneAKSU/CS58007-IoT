@@ -1,121 +1,142 @@
-# device.py
 import time
 import csv
-import argparse
 import requests
 import cv2
 import numpy as np
-from datetime import datetime
+import threading
 
-# Argument parsing
-parser = argparse.ArgumentParser()
+# --- Configuration ---
+SERVER_IP = "http://10.165.66.45:8080"
+SERVER_URL = SERVER_IP + "/infer"
+CAMERA_ID = 0
 
-# Server URL must include /infer
-parser.add_argument("--server", default="http://127.0.0.1/infer", help="Server infer URL (include /infer)")
+class CameraStream:
+    def __init__(self, src=0):
+        # Initialize with V4L2
+        self.stream = cv2.VideoCapture(src, cv2.CAP_V4L2)
+        self.stream.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        self.stream.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        
+        if not self.stream.isOpened():
+            print("Error: Camera failed to open.")
+            exit()
+            
+        # Read first frame
+        (self.grabbed, self.frame) = self.stream.read()
+        self.stopped = False
 
-# Which camera index to use (0 = default webcam)
-parser.add_argument("--camera", type=int, default=0, help="Camera index")
+    def start(self):
+        # Start the thread
+        threading.Thread(target=self.update, args=(), daemon=True).start()
+        return self
 
-# Delay between captured frames (0.2 → approx. 5 FPS)
-parser.add_argument("--interval", type=float, default=0.2, help="Seconds between frames")
+    def update(self):
+        while not self.stopped:
+            # Try to read a frame
+            (grabbed, frame) = self.stream.read()
+            
+            # If successful, update the shared frame
+            if grabbed:
+                self.frame = frame
+                self.grabbed = True
+            else:
+                # If failed, DO NOT STOP. Just wait a tiny bit and try again.
+                self.grabbed = False
+                time.sleep(0.01) 
 
-# Output CSV file for latency logging
-parser.add_argument("--out", default="latency_log.csv", help="CSV log file")
+    def read(self):
+        # Return the latest frame we have
+        return self.frame
 
-# How many frames to capture before stopping (0 = infinite)
-parser.add_argument("--max_frames", type=int, default=0, help="Stop after this many frames (0 = infinite)")
+    def stop(self):
+        self.stopped = True
+        self.stream.release()
 
-args = parser.parse_args()
-SERVER_URL = args.server
+# --- Setup CSV logging ---
+csv_file = open("latency_data.csv", "w", newline="")
+writer = csv.writer(csv_file)
+# Added columns for FPS data
+writer.writerow(["frame", "capture_ts", "rtt", "server_latency", "people", "actual_fps", "server_capacity_fps"])
 
-# Initialize webcam
-cap = cv2.VideoCapture(args.camera)
-if not cap.isOpened():
-    raise SystemExit("Cannot open camera index {}".format(args.camera))
+# --- Clock Sync Function ---
+def sync_clock(server_ip):
+    print("Synchronizing clocks...")
+    try:
+        t0 = time.time()
+        response = requests.get(f"{server_ip}/time", timeout=5)
+        t1 = time.time()
+        if response.status_code == 200:
+            server_ts = response.json().get("server_ts", 0)
+            rtt = t1 - t0
+            clock_offset = server_ts - (t1 - (rtt / 2))
+            print(f"  > Time Offset: {clock_offset:.4f}s")
+            return clock_offset
+    except Exception as e:
+        print(f"  > Sync failed: {e}")
+        return 0.0
+    return 0.0
 
-# Set resolution for consistency
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+# --- Main Execution ---
+print("Starting Camera Thread...")
+cam = CameraStream(CAMERA_ID).start()
+time.sleep(2.0)
 
-# Prepare the CSV log file
-fieldnames = ["frame_idx", "capture_ts", "client_send_ts", "server_ts", "inference_time", "latency_server_calc", "rtt_seconds", "people"]
-csvfile = open(args.out, "w", newline="")
-writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-writer.writeheader()
+time_offset = sync_clock(SERVER_IP)
+frame_count = 0
 
-# Main capture loop
-frame_idx = 0
+# FPS Calculation Variables
+fps_start_time = time.time()
+fps_frame_counter = 0
+current_fps = 0.0
+
 try:
     while True:
-        # Stop if max frame count reached
-        if args.max_frames and frame_idx >= args.max_frames:
-            break
-         # Capture one frame from webcam
-        ret, frame = cap.read()
-        if not ret:
-            print("Failed to read frame")
-            break
-        # Timestamp right after frame acquisition
-        capture_ts = time.time()
-        # JPEG encode the frame before sending
-        ok, jpg = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
-        if not ok:
-            print("JPEG encode failed")
-            continue
-        img_bytes = jpg.tobytes()
-
-        # Prepare for network request
-        client_send_ts = time.time()
-        # Send frame to server and measure RTT
-        try:
-            files = {"image": ("frame.jpg", img_bytes, "image/jpeg")}
-            data = {"capture_ts": str(capture_ts)}
-            t0 = time.time() # Start time of POST request
-            resp = requests.post(SERVER_URL, files=files, data=data, timeout=5.0)
-            t1 = time.time() # End time of POST request
-        except Exception as e:
-            print("Request failed:", e)
-            time.sleep(args.interval)
+        frame = cam.read()
+        if frame is None:
+            time.sleep(0.1)
             continue
 
-        # Round-trip time (client → server → client)
-        rtt = t1 - t0
+        capture_ts = time.time() + time_offset
 
-        # Process server response
-        if resp.status_code == 200:
-            j = resp.json()
-            server_ts = j.get("server_ts") # Timestamp inside server before running YOLO
-            inference_time = j.get("inference_time") # Server-side model inference duration
-            latency_server_calc = j.get("latency") # server_ts - capture_ts
-            people = j.get("people") # People detected in frame
-        else:
-            print("Server returned", resp.status_code, resp.text)
-            time.sleep(args.interval)
-            continue
+        # Compress
+        _, jpg_data = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
         
-         # Write log row to CSV
-        writer.writerow({
-            "frame_idx": frame_idx,
-            "capture_ts": capture_ts,
-            "client_send_ts": client_send_ts,
-            "server_ts": server_ts,
-            "inference_time": inference_time,
-            "latency_server_calc": latency_server_calc,
-            "rtt_seconds": rtt,
-            "people": people
-        })
-        csvfile.flush()
+        t_start = time.time()
+        try:
+            response = requests.post(
+                SERVER_URL,
+                files={"image": ("frame.jpg", jpg_data.tobytes(), "image/jpeg")},
+                data={"capture_ts": str(capture_ts)},
+                timeout=3.0
+            )
+            
+            rtt = time.time() - t_start
 
-        # Display readable output
-        print(f"[{frame_idx}] people={people} inference={inference_time:.3f}s rtt={rtt:.3f}s server_latency={latency_server_calc}")
-        frame_idx += 1
-        # Control frame rate
-        time.sleep(args.interval)
+            if response.status_code == 200:
+                data = response.json()
+                people = data.get("people", 0)
+                lat = data.get("latency", 0)
 
-# Ctrl+C handling       
+                fps_frame_counter += 1
+                if (time.time() - fps_start_time) > 1.0:
+                    current_fps = fps_frame_counter / (time.time() - fps_start_time)
+                    fps_frame_counter = 0
+                    fps_start_time = time.time()
+
+                print(f"FPS: {current_fps:.1f} | Latency: {lat:.3f}s | People: {people}")
+                
+                writer.writerow([frame_count, capture_ts, rtt, lat, people, current_fps])
+                csv_file.flush()
+            else:
+                print(f"Server error: {response.status_code}")
+
+        except Exception as e:
+            print(f"Drop: {e}")
+
+        frame_count += 1
+
 except KeyboardInterrupt:
-    print("Stopping capture")
+    print("Stopping...")
+    cam.stop()
 finally:
-    # Cleanup resources
-    cap.release()
-    csvfile.close()
+    csv_file.close()

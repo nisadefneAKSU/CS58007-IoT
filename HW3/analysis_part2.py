@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-df = pd.read_csv("C:/Users/suuser/Desktop/IoT_HW3/latency_part2.csv")
+df = pd.read_csv("latency_part2.csv")
 
 df['total_latency'] = df['inference_time'] + df['rtt_seconds']
 avg_latency = df['total_latency'].dropna().mean()
