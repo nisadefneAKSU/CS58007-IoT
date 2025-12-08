@@ -11,6 +11,8 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 from sklearn.preprocessing import LabelEncoder
 import matplotlib.pyplot as plt
 import seaborn as sns
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import StratifiedKFold, cross_val_score
 
 ### Here we do OS specific WiFi scan so that user can do it both with Windows and Linux
 def scan_wifis():
@@ -109,7 +111,6 @@ def collect_data_for_each_room(room_name, scans_per_room=20, delay=1.0, outfile=
     # Check if output CSV already exists and set column names header only once
     file_exists = os.path.isfile(outfile)
     df.to_csv(outfile, mode="a", header=not file_exists, index=False)
-
     print(f"Saved {len(df)} rows for room {room_name}.\n")
     return df
 
@@ -127,7 +128,6 @@ def clean_dataset(df):
     df = df.drop_duplicates(subset=["room", "bssid", "ssid", "rssi"])
     # Count rows after cleaning
     after = len(df)
-
     print(f"Cleaned the dataset: Removed {before - after} rows -> Now {after} rows.\n")
     return df
 
@@ -142,11 +142,53 @@ def build_fingerprint_matrix(df):
         fill_value=-100 # Missing BSSIDs are filled with -100 (weak/no signal).
     )
 
-    # Add room label as a column (same timestamp means same room)
+    # Add room label as a column to the matrix (same timestamp means same room)
     room_map = df.groupby("timestamp")["room"].first()
     matrix["room"] = room_map
-
     return matrix
+
+
+### We need to find the optimal k by cross-validation for our WiFi fingerprint dataset
+def find_best_k(X, y, max_k=15):
+    # Count samples per class and automatically choose the correct number of folds based on dataset balance
+    class_counts = y.value_counts()
+    min_class_size = class_counts.min()
+
+    # The number of folds cannot exceed the smallest class count
+    n_folds = min(5, min_class_size)  
+    n_folds = max(2, n_folds)  # Ensure at least 2 folds
+
+    print(f"\nRunning {n_folds}-Fold Cross Validation for k = 1 to {max_k}")
+    print(f"Smallest room has {min_class_size} samples -> Using {n_folds}-fold CV")
+
+    skf = StratifiedKFold( # Stratified to keeps class proportions equal
+        n_splits=n_folds, # 50% train, 50% validation (we use 2-fold CV because some room classes have only 2 samples)
+        shuffle=True, # Randomizes order
+        random_state=42 # Ensures reproducibility
+        )
+
+    # All k values to test
+    k_values = range(1, max_k + 1)
+    # Store mean cv accuracy for each k
+    cv_scores = []
+
+    # Loop through all k values
+    for k in k_values:
+        # Create KNN model with current k value
+        knn = KNeighborsClassifier(n_neighbors=k)
+        # Run cross-validation using 2 folds
+        scores = cross_val_score(knn, X, y, cv=skf)
+        # Compute the average accuracy across the 2 folds
+        mean_score = np.mean(scores)
+        # Store the result
+        cv_scores.append(mean_score)
+        print(f"k = {k:2d}  ->  Accuracy = {mean_score:.4f}")
+
+    # Determine which k gives the highest accuracy
+    best_k = k_values[np.argmax(cv_scores)]
+    best_score = max(cv_scores)
+    print(f"Best k = {best_k}  with accuracy = {best_score:.4f}")
+    return best_k
 
 
 ### For training, we use RSSI + known room labels to teach the model. For testing, we use only RSSI (no room info) -> predict room -> compare predictions to ground truth.
@@ -168,27 +210,30 @@ def train_and_evaluate(csv_file="wifi_dataset.csv"):
     pivot["room_encoded"] = label_encoder.fit_transform(pivot["room"])
     # Features: RSSI values for all BSSIDs
     X = pivot.drop(["room", "room_encoded"], axis=1)
-    # Labels: encoded room numbers
+    # Labels: Encoded room numbers
     y = pivot["room_encoded"]
-
+    
     # Count how many samples exist per room
     counts = pivot["room"].value_counts()
     print("\nSamples per room:\n", counts)
 
-    # Split data into training and test sets (80/20), stratified by room label to maintain class proportions
+    # Find the optimal k value for the classifier
+    best_k = find_best_k(X, y)
+
+    # Split data into training and test sets (80/20), shuffle to ensure the train/test split contains a fair mix of all rooms
     try:
         X_train, X_test, y_train, y_test = train_test_split(
             X, y,
             test_size=0.2,
-            stratify=y,
-            random_state=42
+            random_state=42,
+            shuffle = True
         )
     except ValueError as e:
         print("Error:", e)
         print("\nTip: You need to collect more samples per room so that each class is represented in the test set.\n")
 
-    # Initialize K-Nearest Neighbors classifier with 3 neighbors, using distance-weighted voting
-    model = KNeighborsClassifier(n_neighbors=3,  weights="distance")
+    # Initialize KNN classifier with k neighbors, using distance-weighted voting
+    model = KNeighborsClassifier(n_neighbors=best_k,  weights="distance")
     # Train the model on the training data
     model.fit(X_train, y_train)
     # Predict room labels on the test set
