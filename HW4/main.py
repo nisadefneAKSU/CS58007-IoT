@@ -12,6 +12,7 @@ from sklearn.preprocessing import LabelEncoder
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 
 ### Here we do OS specific WiFi scan so that user can do it both with Windows and Linux
@@ -187,7 +188,7 @@ def find_best_k(X, y, max_k=10):
     # Determine which k gives the highest accuracy
     best_k = k_values[np.argmax(cv_scores)]
     best_score = max(cv_scores)
-    print(f"Best k = {best_k}  with accuracy = {best_score:.4f}")
+    print(f"Best k = {best_k}  with CV accuracy = {best_score:.4f}")
     return best_k
 
 
@@ -239,7 +240,7 @@ def train_and_evaluate(csv_file="wifi_dataset.csv"):
     # Predict room labels on the test set
     y_pred = model.predict(X_test)
     # Print overall accuracy of the classifier
-    print("\nAccuracy:", accuracy_score(y_test, y_pred))
+    print("\nKNN Accuracy:", accuracy_score(y_test, y_pred))
 
     # Get the unique room labels present in the test set
     unique_labels = sorted(set(y_test))
@@ -255,17 +256,129 @@ def train_and_evaluate(csv_file="wifi_dataset.csv"):
 
     # Compute confusion matrix for test predictions
     confusion_m = confusion_matrix(y_test, y_pred, labels=unique_labels)
+    target_names = label_encoder.inverse_transform(unique_labels)
+    
+    return target_names, confusion_m
 
-    # Plot the confusion matrix as a heatmap for better visualization
-    plt.figure(figsize=(8, 6))
-    sns.heatmap(confusion_m, annot=True, fmt="d", cmap="Blues",
-                xticklabels=label_encoder.inverse_transform(unique_labels),
-                yticklabels=label_encoder.inverse_transform(unique_labels))
-    plt.title("Confusion Matrix")
-    plt.xlabel("Predicted")
-    plt.ylabel("True")
-    plt.show()
+def find_best_rf_params(X, y, n_estimators_list=[25, 50, 100, 150, 200], max_depth_list=[5, 10, 20, 25, 30, None]):
+    # Count samples per class and automatically choose the correct number of folds based on dataset balance (basically will choose the number of folds based on the minimum number of samples)
+    class_counts = y.value_counts()
+    min_class_size = class_counts.min()
 
+    # The number of folds cannot exceed the smallest class count
+    n_folds = min(5, min_class_size)
+    n_folds = max(2, n_folds)  # Ensure at least 2 folds
+
+    print(f"\nRunning {n_folds}-Fold Cross Validation for Random Forest")
+    print(f"Smallest room has {min_class_size} samples -> Using {n_folds}-fold CV")
+
+    skf = StratifiedKFold( # Stratified to keeps class proportions equal
+        n_splits=n_folds,
+        shuffle=True, # Randomizes order
+        random_state=42 # to ensure reproducibility
+    )
+
+    best_score = -1
+    best_params = None
+
+    # Grid search manually (small grid) through all of the n_estimators, max_depth combos to find the best model
+    for n in n_estimators_list:
+        for depth in max_depth_list:
+            # Create new RF model for the current hyperparameter combination
+            model = RandomForestClassifier(
+                n_estimators=n,
+                max_depth=depth,
+                random_state=42
+            )
+
+            # Run cross-validation using 2 folds
+            scores = cross_val_score(model, X, y, cv=skf)
+            # Compute the average accuracy across the 2 folds
+            mean_score = np.mean(scores)
+
+            print(f"n_estimators={n:3d}, max_depth={str(depth):>4} -> Accuracy = {mean_score:.4f}")
+
+            # The reason we use this approach rather than appending scores to a cv_scores list is because some scores repeat so then we cannnot tell which parameter combination is best.
+            if mean_score > best_score:
+                best_score = mean_score
+                best_params = (n, depth)
+
+    print(f"\nBest Parameters:")
+    print(f"n_estimators = {best_params[0]}, max_depth = {best_params[1]}")
+    print(f"with CV accuracy = {best_score:.4f}\n")
+
+    return best_params
+
+### For training, we use RSSI and known room labels to teach the model. For testing, we use this flow: Only RSSI (no room info) -> predict room -> compare predictions to ground truth.
+def train_and_evaluate_rf(csv_file="wifi_dataset.csv"):
+    # Load the Wi-Fi dataset from the CSV file
+    df = pd.read_csv(csv_file)
+    # Print the df shape (num_rows, num_columns)
+    print("\nDataset loaded:", df.shape)
+
+    df = clean_dataset(df)
+    pivot = build_fingerprint_matrix(df)
+    print("Fingerprint matrix shape:", pivot.shape)
+
+    # Encode room labels into numerical values for classification
+    label_encoder = LabelEncoder()
+    pivot["room_encoded"] = label_encoder.fit_transform(pivot["room"])
+    # Features: RSSI values for all BSSIDs
+    X = pivot.drop(["room", "room_encoded"], axis=1)
+    # Label: Encoded room numbers
+    y = pivot["room_encoded"]
+
+    # Count how many different BSSID samples exist per room
+    print("\nSamples per room:\n", pivot["room"].value_counts())
+
+    # Find the optimal n_estimators and max_depth value combinations for the classifier
+    best_n, best_depth = find_best_rf_params(X, y)
+
+    # Split data into training and test sets (80/20), shuffle to ensure the train/test split contains a fair mix of all rooms
+    try:
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y,
+            test_size=0.2,
+            shuffle=True,
+            random_state=42
+        )
+    except ValueError as e:
+        print("Error:", e)
+        print("\nTip: You need to collect more samples per room so that each class is represented in the test set.\n")
+        return
+
+    # Initialize classifier with the best parameter values we found
+    model = RandomForestClassifier(
+        n_estimators=best_n,
+        max_depth=best_depth,
+        random_state=42
+    )
+    # Train the model on the training data
+    model.fit(X_train, y_train)
+
+    # Predict room labels on the test set
+    y_pred = model.predict(X_test)
+    # Calculate the overall accuracy of the classifier
+    acc = accuracy_score(y_test, y_pred)
+    # Print overall accuracy of the classifier
+    print("\nRandom Forest Accuracy:", acc)
+
+    unique_labels = sorted(set(y_test))
+
+    print("\nClassification Report:\n")
+    print(classification_report(
+        y_test,
+        y_pred,
+        labels=unique_labels,
+        target_names=label_encoder.inverse_transform(unique_labels),
+        zero_division=0
+    ))
+
+    # Confusion Matrix
+    confusion_m = confusion_matrix(y_test, y_pred, labels=unique_labels)
+    target_names = label_encoder.inverse_transform(unique_labels)
+
+    return target_names, confusion_m
 
 ### Selection menu where user selects options from terminal and corresponding function is executed
 def user_selection():
@@ -279,7 +392,46 @@ def user_selection():
         room = input("Enter room name: ").strip()
         collect_data_for_each_room(room)
     elif choice == "2":
-        train_and_evaluate()
+        knn_unique_labels, conf_matrix_knn=train_and_evaluate()
+        print("-"*80)
+        rf_unique_labels, conf_matrix_rf=train_and_evaluate_rf()
+        print("RF seems to have better classification results (higher accuracy than KNN); therefore, we pick RF.")
+
+        fig, axes=  plt.subplots(1, 2, figsize=(14, 6))
+        
+        ### On the Left: KNN ###
+        # Plot the confusion matrix as a heatmap for better visualization
+        sns.heatmap(
+            conf_matrix_knn,
+            annot=True,
+            fmt="d",
+            cmap="Blues",
+            ax=axes[0],
+            xticklabels=list(knn_unique_labels),
+            yticklabels=list(knn_unique_labels)
+        )
+        axes[0].set_title("KNN Confusion Matrix")
+        axes[0].set_xlabel("Predicted")
+        axes[0].set_ylabel("True")
+
+        ### On the Right: Random Forest ###
+        # Plot the confusion matrix as a heatmap for better visualization
+        sns.heatmap(
+            conf_matrix_rf,
+            annot=True,
+            fmt="d",
+            cmap="Greens",
+            ax=axes[1],
+            xticklabels=list(rf_unique_labels),
+            yticklabels=list(rf_unique_labels)
+        )
+        axes[1].set_title("Random Forest Confusion Matrix")
+        axes[1].set_xlabel("Predicted")
+        axes[1].set_ylabel("True")
+
+        plt.tight_layout()
+        plt.show()
+
     else:
         print("Please enter a valid choice.")
 
