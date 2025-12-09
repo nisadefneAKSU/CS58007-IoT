@@ -50,7 +50,7 @@ def scan_wifis():
                 })
 
     elif system == "linux":
-        # Linux WiFi scan command -> requests SSID, BSSID, and SIGNAL columns
+        # Linux WiFi scan command -> Requests SSID, BSSID, and SIGNAL columns
         cmd = ["nmcli", "-f", "SSID,BSSID,SIGNAL", "device", "wifi", "list"]
         # Run the command, decode the output, and split it into lines
         output = subprocess.check_output(cmd).decode(errors="ignore").split("\n")
@@ -85,7 +85,7 @@ def collect_data_for_each_room(room_name, scans_per_room=20, delay=1.0, outfile=
     print(f"\nCollecting {scans_per_room} full fingerprints for room: {room_name}")
 
     for i in range(scans_per_room):
-        print(f"[{i+1}/{scans_per_room}] Scanning...") # Scan number for user to see in the terminal like [1/10], [2/10]...
+        print(f"[{i+1}/{scans_per_room}] Scanning...") # Scan number for user to see in the terminal like [1/20], [2/20]...
 
         # Perform one full WiFi scan and return list of APs for that scan
         scan = scan_wifis()
@@ -100,11 +100,11 @@ def collect_data_for_each_room(room_name, scans_per_room=20, delay=1.0, outfile=
                     "timestamp": timestamp, # Same timestamp is used to group all APs from this scan
                     "room": room_name, # Which room this scan belongs to that we got as user input
                     "bssid": ap["bssid"], # Unique AP ID
-                    "ssid": ap.get("ssid", ""), # AP name (if hidden then we see in the dataset as "")
+                    "ssid": ap.get("ssid", ""), # AP name (If hidden then we see in the dataset as "")
                     "rssi": ap["rssi"] # Signal strength
                 })
 
-        time.sleep(delay)   # Wait before doing the next scan (to avoid duplicate timestamps)
+        time.sleep(delay) # Wait before doing the next scan (to avoid duplicate timestamps)
 
     # Convert all collected rows into a DataFrame
     df = pd.DataFrame(rows)
@@ -149,7 +149,7 @@ def build_fingerprint_matrix(df):
 
 
 ### We need to find the optimal k by cross-validation for our WiFi fingerprint dataset
-def find_best_k(X, y, max_k=15):
+def find_best_k(X, y, max_k=10):
     # Count samples per class and automatically choose the correct number of folds based on dataset balance
     class_counts = y.value_counts()
     min_class_size = class_counts.min()
@@ -162,7 +162,7 @@ def find_best_k(X, y, max_k=15):
     print(f"Smallest room has {min_class_size} samples -> Using {n_folds}-fold CV")
 
     skf = StratifiedKFold( # Stratified to keeps class proportions equal
-        n_splits=n_folds, # 50% train, 50% validation (we use 2-fold CV because some room classes have only 2 samples)
+        n_splits=n_folds,
         shuffle=True, # Randomizes order
         random_state=42 # Ensures reproducibility
         )
@@ -191,16 +191,16 @@ def find_best_k(X, y, max_k=15):
     return best_k
 
 
-### For training, we use RSSI + known room labels to teach the model. For testing, we use only RSSI (no room info) -> predict room -> compare predictions to ground truth.
+### For training, we use RSSI and known room labels to teach the model. For testing, we use this flow: Only RSSI (no room info) -> predict room -> compare predictions to ground truth.
 def train_and_evaluate(csv_file="wifi_dataset.csv"):
-    # Load the Wi-Fi dataset from a CSV file
+    # Load the Wi-Fi dataset from the CSV file
     df = pd.read_csv(csv_file)
     # Print the shape (rows, columns) of the dataset
     print("\nDataset loaded:", df.shape)
 
     # Clean the dataset
     df = clean_dataset(df)
-    # Convert the dataset into a fingerprint matrix: rows = timestamps/scans, columns = BSSIDs, values = RSSI
+    # Convert the dataset into a fingerprint matrix
     pivot = build_fingerprint_matrix(df)
     # Print the shape of the fingerprint matrix
     print("Fingerprint matrix shape:", pivot.shape)
@@ -210,7 +210,7 @@ def train_and_evaluate(csv_file="wifi_dataset.csv"):
     pivot["room_encoded"] = label_encoder.fit_transform(pivot["room"])
     # Features: RSSI values for all BSSIDs
     X = pivot.drop(["room", "room_encoded"], axis=1)
-    # Labels: Encoded room numbers
+    # Label: Encoded room numbers
     y = pivot["room_encoded"]
     
     # Count how many samples exist per room
