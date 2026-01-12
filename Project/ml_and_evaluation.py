@@ -61,17 +61,6 @@ class OccupancyMLTrainer:
         """Train all ML models (optionally with tuned hyperparameters)"""
         print("\nTraining ML models:")
 
-        # Dummy Model
-        print("0-Training Dummy Model...")
-        dum_model = DummyClassifier(strategy='most_frequent', random_state=42) # This model always predicts the most common/majority class label, in this case 1
-        dum_model.fit(self.X_train, self.y_train)
-        self.models["Dummy Model"]=dum_model
-
-        y_pred_train = dum_model.predict(self.X_train)
-        y_pred_test = dum_model.predict(self.X_test)
-        print(f"Dummy model is trained, for baseline perofrmance.\
-              \nAccuracy -> {accuracy_score(self.y_test, y_pred_test)} F1-Score -> {f1_score(self.y_test, y_pred_test)}")
-
         # Logistic Regression
         print("1-Training Logistic Regression...") 
         lr_params = best_params.get('Logistic Regression', {}) if best_params else {}  # Get tuned parameters if available, otherwise use empty dict
@@ -428,7 +417,7 @@ class OccupancyMLTrainer:
         plt.close()
         
         # 2. Confusion matrices
-        fig, axes = plt.subplots(1, 4, figsize=(18, 4)) # Create subplots
+        fig, axes = plt.subplots(1, 3, figsize=(18, 5)) # Create subplots
         fig.suptitle('Confusion Matrices', fontsize=16, fontweight='bold') # Add main title to the figure with bold formatting
         
         for idx, (model_name, results) in enumerate(self.results.items()): # Iterate through model results with index
@@ -494,6 +483,19 @@ class OccupancyMLTrainer:
             print(f"Saved feature_importance.png.")
             plt.close()
 
+def train_dummy_baseline_model(X_train, X_test, y_train, y_test):
+    # Dummy Model
+    print("\nTraining Dummy Model...")
+    dum_model = DummyClassifier(strategy='most_frequent', random_state=42) # This model always predicts the most common/majority class label, in this case 1
+    dum_model.fit(X_train, y_train)
+    # self.models["Dummy Model"]=dum_model
+
+    y_pred_train = dum_model.predict(X_train)
+    y_pred_test = dum_model.predict(X_test)
+    print(f"Dummy model is trained, for baseline perofrmance:\
+            \nTrain Accuracy -> {accuracy_score(y_train, y_pred_train):.4f} Test F1-Score -> {f1_score(y_train, y_pred_train):.4f}\
+            \nTest Accuracy -> {accuracy_score(y_test, y_pred_test):.4f} Test F1-Score -> {f1_score(y_test, y_pred_test):.4f}")
+
 ### Main execution
 if __name__ == "__main__":
     print("Starting machine learning and evaluation...")
@@ -506,6 +508,8 @@ if __name__ == "__main__":
     trainer.scale_features()
     # Step 3: Hyperparameter tuning
     best_params = trainer.tune_hyperparameters(cv=5)
+    # Step 4a: Obtain baseline parameters by training a dummy model that classifies all instances as the majority class
+    train_dummy_baseline_model(trainer.X_train, trainer.X_test, trainer.y_train, trainer.y_test)
     # Step 4: Train models using best parameters
     trainer.train_models(best_params=best_params)
     # Step 5: Evaluate models
