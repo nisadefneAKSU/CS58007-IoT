@@ -1,0 +1,121 @@
+{
+  "models": {
+    "Logistic Regression": {
+      "train_metrics": {
+        "accuracy": 0.9583333333333334,
+        "precision": 0.9645522388059702,
+        "recall": 0.9828897338403042,
+        "f1_score": 0.9736346516007532
+      },
+      "test_metrics": {
+        "accuracy": 0.9467455621301775,
+        "precision": 0.9424460431654677,
+        "recall": 0.9924242424242424,
+        "f1_score": 0.966789667896679
+      },
+      "confusion_matrix": [
+        [
+          29,
+          8
+        ],
+        [
+          1,
+          131
+        ]
+      ]
+    },
+    "Random Forest": {
+      "train_metrics": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "test_metrics": {
+        "accuracy": 0.9763313609467456,
+        "precision": 0.9848484848484849,
+        "recall": 0.9848484848484849,
+        "f1_score": 0.9848484848484849
+      },
+      "confusion_matrix": [
+        [
+          35,
+          2
+        ],
+        [
+          2,
+          130
+        ]
+      ]
+    },
+    "KNN": {
+      "train_metrics": {
+        "accuracy": 0.9672619047619048,
+        "precision": 0.9790874524714829,
+        "recall": 0.9790874524714829,
+        "f1_score": 0.9790874524714829
+      },
+      "test_metrics": {
+        "accuracy": 0.9467455621301775,
+        "precision": 0.9694656488549618,
+        "recall": 0.9621212121212122,
+        "f1_score": 0.9657794676806084
+      },
+      "confusion_matrix": [
+        [
+          33,
+          4
+        ],
+        [
+          5,
+          127
+        ]
+      ]
+    }
+  },
+  "sensor_combinations": {
+    "All sensors": {
+      "accuracy": 0.9763313609467456,
+      "precision": 0.9848484848484849,
+      "recall": 0.9848484848484849,
+      "f1_score": 0.9848484848484849,
+      "num_features": 26
+    },
+    "Without CO2": {
+      "accuracy": 0.9822485207100592,
+      "precision": 0.9923664122137404,
+      "recall": 0.9848484848484849,
+      "f1_score": 0.9885931558935361,
+      "num_features": 21
+    },
+    "Without light": {
+      "accuracy": 0.9644970414201184,
+      "precision": 0.9772727272727273,
+      "recall": 0.9772727272727273,
+      "f1_score": 0.9772727272727273,
+      "num_features": 21
+    },
+    "Without microphone": {
+      "accuracy": 0.9763313609467456,
+      "precision": 0.9923076923076923,
+      "recall": 0.9772727272727273,
+      "f1_score": 0.9847328244274809,
+      "num_features": 20
+    },
+    "Only motion (PIR)": {
+      "accuracy": 0.7810650887573964,
+      "precision": 0.7810650887573964,
+      "recall": 1.0,
+      "f1_score": 0.8770764119601329,
+      "num_features": 3
+    },
+    "CO2 + PIR only": {
+      "accuracy": 0.7988165680473372,
+      "precision": 0.8266666666666667,
+      "recall": 0.9393939393939394,
+      "f1_score": 0.8794326241134752,
+      "num_features": 8
+    }
+  },
+  "best_model": "Random Forest"
+}
