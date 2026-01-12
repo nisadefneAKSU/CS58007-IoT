@@ -17,52 +17,59 @@ class OccupancyDataProcessor:
         
     def load_data(self):
         """Load all CSV files and combine them"""
-        dfs = []
+        dfs = []  # List to store each loaded CSV as a DataFrame
         
-        for file in self.csv_files:
-            df = pd.read_csv(file)
+        for file in self.csv_files:  # Loop through all CSV file paths provided to the class
+            df = pd.read_csv(file)  # Read the current CSV file into a pandas DataFrame
             
-            # Standardize column names
+            # Standardize column names by removing extra spaces
             df.columns = df.columns.str.strip()
             
-            # Keep only required columns (all of them)
+            # Define the required columns that we expect in the dataset
             required_cols = ['Timestamp', 'Temperature', 'Humidity', 'Light', 'CO2', 'PIR', 'Microphone', 'Occupancy_Label']
             
-            # Check which columns exist
+            # Keep only columns that actually exist in the file
             available_cols = [col for col in required_cols if col in df.columns]
-            df = df[available_cols]
+            df = df[available_cols]  # Filter DataFrame to only these columns
             
-            # Convert numeric columns to proper numeric types
+            # Convert sensor and label columns to numeric values (invalid values become NaN)
             numeric_cols = ['Temperature', 'Humidity', 'Light', 'CO2', 'PIR', 'Microphone', 'Occupancy_Label']
             for col in numeric_cols:
                 if col in df.columns:
-                    df[col] = pd.to_numeric(df[col], errors='coerce')
+                    df[col] = pd.to_numeric(df[col], errors='coerce')  # Force numeric type
             
+            # List of sensor columns used to detect if a row contains any real data
             sensor_cols = ['Temperature', 'Humidity', 'Light', 'CO2', 'PIR', 'Microphone']
             existing_sensor_cols = [c for c in sensor_cols if c in df.columns]
             
-            before_len = len(df)
+            before_len = len(df)  # Number of rows before cleaning
+            # Remove rows where ALL sensor values are missing
             df = df.dropna(subset=existing_sensor_cols, how='all')
-            removed = before_len - len(df)
+            removed = before_len - len(df)  # Count how many rows were removed
             
+            # Print basic statistics for this file
             print(f"Loaded {file}: {len(df)} rows, {len(available_cols)} columns")
             if removed > 0:
                 print(f"(Removed {removed} completely empty rows)")
             
-            dfs.append(df)
+            dfs.append(df)  # Store the cleaned DataFrame
         
-        self.raw_data = pd.concat(dfs, ignore_index=True) # Concatenate all dataframes into one, resetting index
-        print(f"\nTotal rows loaded: {len(self.raw_data)}") # Total number of rows in combined dataset
-        print(f"Columns in combined data: {list(self.raw_data.columns)}") # List of columns in combined dataset
-        print(f"Rows with complete data: {self.raw_data.dropna().shape[0]}") # Number of rows with no missing values
+        # Combine all CSV files into one large dataset
+        self.raw_data = pd.concat(dfs, ignore_index=True)
+        print(f"\nTotal rows loaded: {len(self.raw_data)}")  # Total number of rows
+        print(f"Columns in combined data: {list(self.raw_data.columns)}")  # Column names
+        print(f"Rows with complete data: {self.raw_data.dropna().shape[0]}")  # Rows without any missing values
+        
+        # Show missing value statistics per column
         print(f"Missing values per column:")
-        for col in self.raw_data.columns: # Iterate through each column
-            missing = self.raw_data[col].isna().sum() # Count missing values in column
-            if missing > 0: # Check if column has any missing values
-                print(f"{col}: {missing} ({missing/len(self.raw_data)*100:.1f}%)")  # Print column info of missing values
+        for col in self.raw_data.columns:
+            missing = self.raw_data[col].isna().sum()  # Count missing values
+            if missing > 0:
+                print(f"{col}: {missing} ({missing/len(self.raw_data)*100:.1f}%)")
             else:
-                print(f"{col}: None")  # Print that column has no missing values
-        return self.raw_data  # Return the combined raw dataset
+                print(f"{col}: None")
+        
+        return self.raw_data  # Return the combined dataset
     
     def clean_data(self, clip_extremes=True):
         """Clean and preprocess raw sensor data.
@@ -70,40 +77,41 @@ class OccupancyDataProcessor:
         - Optionally clips extreme values instead of dropping them
         - Preserves PIR spikes (no percentile clipping on PIR)"""
 
-        df = self.raw_data.copy()  # Avoid modifying original
+        df = self.raw_data.copy()  # Create a copy so the original data remains unchanged
 
-        # --- Convert timestamp ---
+        # Convert timestamp column to datetime format
         df['Timestamp'] = pd.to_datetime(df['Timestamp'], errors='coerce')
-        invalid_ts = df['Timestamp'].isna().sum()
+        invalid_ts = df['Timestamp'].isna().sum()  # Count invalid timestamps
         if invalid_ts > 0:
             print(f"Removed {invalid_ts} rows with invalid timestamps")
-            df = df.dropna(subset=['Timestamp'])
+            df = df.dropna(subset=['Timestamp'])  # Remove rows with invalid timestamps
 
+        # Sort data chronologically
         df = df.sort_values('Timestamp').reset_index(drop=True)
 
-        # --- Forward fill up to 3 consecutive rows ---
+        # Forward-fill missing values up to 3 consecutive rows
         df = df.ffill(limit=3)
 
-        # --- Drop remaining rows with missing values ---
+        # Remove any remaining rows that still have missing values
         rows_before = len(df)
         df = df.dropna()
         rows_removed = rows_before - len(df)
         if rows_removed > 0:
             print(f"Removed {rows_removed} rows with missing values")
 
-        # --- Remove duplicate timestamps ---
+        # Remove duplicated timestamps to avoid repeated sensor readings
         duplicates = df.duplicated(subset=['Timestamp']).sum()
         if duplicates > 0:
             print(f"Removed {duplicates} duplicate timestamps")
             df = df.drop_duplicates(subset=['Timestamp'])
 
-        # --- Ensure numeric columns are valid ---
+        # Ensure no sensor value is negative (physically impossible)
         numeric_cols = ['Temperature', 'Humidity', 'Light', 'CO2', 'PIR', 'Microphone']
         for col in numeric_cols:
             if col in df.columns:
-                df = df[df[col] >= 0]  # remove impossible negative values
+                df = df[df[col] >= 0]
 
-        # --- Clip extremes based on physical ranges + 1-99 percentile (except PIR) ---
+        # Clip extreme values to physical limits and percentiles
         if clip_extremes:
             sensor_ranges = {
                 'Temperature': (15, 30),
@@ -115,9 +123,9 @@ class OccupancyDataProcessor:
             }
             for col, (low, high) in sensor_ranges.items():
                 if col in df.columns:
-                    # Clip to physical range
+                    # Enforce physical sensor limits
                     df[col] = df[col].clip(lower=low, upper=high)
-                    # Percentile clipping for all except PIR
+                    # Further clip to 1st–99th percentile to remove outliers (except PIR)
                     if col != 'PIR':
                         q1, q99 = df[col].quantile([0.01, 0.99])
                         df[col] = df[col].clip(lower=q1, upper=q99)
@@ -125,9 +133,10 @@ class OccupancyDataProcessor:
                     else:
                         print(f"{col}: clipped to physical range only ({low}-{high}), PIR spikes preserved")
 
-        self.cleaned_data = df.reset_index(drop=True)
+        self.cleaned_data = df.reset_index(drop=True)  # Store cleaned dataset
         print(f"\nClean dataset: {len(self.cleaned_data)} rows")
         return self.cleaned_data
+
 
     def extract_features(self, window_size=5):
         """Extract features from sensor data
@@ -135,45 +144,45 @@ class OccupancyDataProcessor:
 
         print(f"\nExtracting features (window size is {window_size})...")
 
-        df = self.cleaned_data.copy()  # Create copy of cleaned data for feature extraction
+        df = self.cleaned_data.copy()  # Copy cleaned data to avoid overwriting it
 
-        # --- Noise features (keep only mean & min) ---
+        # Rolling mean and minimum of microphone data to capture noise patterns
         print("Microphone features (noise)")
         df['noise_mean'] = df['Microphone'].rolling(window=window_size, min_periods=1).mean()
         df['noise_min'] = df['Microphone'].rolling(window=window_size, min_periods=1).min()
 
-        # --- CO2 features ---
+        # CO2 statistics to capture air quality changes caused by people
         print("CO2 features")
         df['co2_mean'] = df['CO2'].rolling(window=window_size, min_periods=1).mean()
-        df['co2_delta'] = df['CO2'].diff()
+        df['co2_delta'] = df['CO2'].diff()  # Instant change in CO2
         df['co2_delta_mean'] = df['co2_delta'].rolling(window=window_size, min_periods=1).mean()
         df['co2_variance'] = df['CO2'].rolling(window=window_size, min_periods=1).var()
 
-        # --- Light features ---
+        # Light statistics to detect changes caused by people switching lights
         print("Light intensity features")
         df['light_mean'] = df['Light'].rolling(window=window_size, min_periods=1).mean()
         df['light_variance'] = df['Light'].rolling(window=window_size, min_periods=1).var()
         df['light_std'] = df['Light'].rolling(window=window_size, min_periods=1).std()
         df['light_delta'] = df['Light'].diff()
 
-        # --- Temperature & humidity ---
+        # Temperature and humidity trends caused by human presence
         print("Temperature & humidity features")
         df['temp_mean'] = df['Temperature'].rolling(window=window_size, min_periods=1).mean()
         df['humidity_mean'] = df['Humidity'].rolling(window=window_size, min_periods=1).mean()
         df['temp_delta'] = df['Temperature'].diff()
 
-        # --- PIR motion features (keep main summary stats only) ---
+        # PIR motion statistics to summarize recent motion activity
         print("PIR motion features")
         df['pir_sum'] = df['PIR'].rolling(window=window_size, min_periods=1).sum()
         df['pir_max'] = df['PIR'].rolling(window=window_size, min_periods=1).max()
         df['pir_rolling_mean'] = df['PIR'].rolling(window=window_size, min_periods=1).mean()
 
-        # --- Time-based feature ---
+        # Extract hour of day from timestamp (captures daily usage patterns)
         df['hour'] = df['Timestamp'].dt.hour
 
-        # Drop remaining NaNs and reset index
+        # Remove rows with NaNs created by rolling operations
         df = df.dropna().reset_index(drop=True)
-        self.features = df
+        self.features = df  # Store final feature table
         print(f"Feature extraction complete: {df.shape[1]} columns")
         return self.features
 

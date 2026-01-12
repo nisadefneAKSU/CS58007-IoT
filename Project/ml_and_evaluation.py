@@ -453,14 +453,8 @@ class OccupancyMLTrainer:
         comparison_df.to_csv(f'{output_dir}/model_comparison.csv')
         print(f"Saved model_comparison.csv.")
         
-        if self.sensor_combinations: # Check if sensor combinations were tested
-            sensor_df = pd.DataFrame(self.sensor_combinations).T  # Create dataframe from sensor combinations
-            sensor_df.to_csv(f'{output_dir}/sensor_combinations.csv')  # Save to CSV
-            print(f"Saved sensor_combinations.csv.") 
-        
         return report
     
-
     def train_dummy_baseline_model(self,):
         """returns baseline accuracy, preciseness, recall, and f1-score values"""
         # Dummy Model
@@ -543,33 +537,7 @@ class OccupancyMLTrainer:
         print(f"Saved confusion_matrices.png.")
         plt.close()
         
-        # 3. Sensor combination analysis 
-        if self.sensor_combinations:  # Check if sensor combination results exist
-            fig, ax = plt.subplots(figsize=(12, 6))  # Create single subplot
-            
-            combo_names = list(self.sensor_combinations.keys())  # Extract list of sensor combination names
-            f1_scores = [self.sensor_combinations[c]['f1_score'] for c in combo_names]  # Extract F1-scores for each combination
-            num_features = [self.sensor_combinations[c]['num_features'] for c in combo_names]  # Extract number of features for each combination
-            
-            colors = plt.cm.viridis(np.linspace(0, 1, len(combo_names)))  # Generate array of colors from viridis colormap
-            bars = ax.bar(combo_names, f1_scores, color=colors)  # Create bar chart with combination names and F1-scores
-            
-            ax.set_ylabel('F1-Score', fontsize=12)
-            ax.set_title('Figure 5. Sensor Combination Performance', fontsize=14, fontweight='bold') 
-            ax.set_ylim([0, 1.12])  # Set y-axis limits
-            ax.grid(axis='y', alpha=0.3)  # Add horizontal grid lines with 30% transparency
-            plt.xticks(rotation=25, ha='right', fontsize=14)
-            
-            # Add feature count labels 
-            for bar, num_feat, f1 in zip(bars, num_features, f1_scores):  # Iterate through bars with their feature counts and F1-scores
-                ax.text(bar.get_x() + bar.get_width()/2., f1 + 0.02, f'F1: {f1:.3f}\n({num_feat} features)', ha='center', va='bottom', fontsize=12) 
-            
-            plt.tight_layout()
-            plt.savefig(f'{output_dir}/sensor_combinations.png', dpi=300, bbox_inches='tight')
-            print(f"Saved sensor_combinations.png.")
-            plt.close() 
-        
-        # 4. Feature importance
+        # 3. Feature importance
         importance_df = self.get_feature_importance(best_model_name, top_n=15)  # Get dataframe of top 15 most important features
 
         if importance_df is not None:  # Check if feature importance data is available
