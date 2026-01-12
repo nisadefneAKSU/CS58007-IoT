@@ -74,8 +74,13 @@ def build_feature_vector(raw): # This function maps raw sensor input to the feat
     # Return a single-row DataFrame ready for model.predict()
     return pd.DataFrame([ordered_features], columns=FEATURE_NAMES)
     
-app = Flask(__name__)
-# Create Flask application instance
+app = Flask(__name__)# Create Flask application instance
+
+# Root/health check endpoint: Allows to verify that the server is running by visiting http://<server-ip>:5000/
+# Responds with a simple message. Method is GET.
+@app.route("/", methods=["GET"])
+def health():
+    return "Occupancy Inference Server is running"
 
 @app.route("/predict", methods=["POST"])
 # Define an HTTP endpoint at /predict that accepts POST requests
