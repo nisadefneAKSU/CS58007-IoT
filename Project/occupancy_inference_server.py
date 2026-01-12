@@ -145,6 +145,14 @@ def predict():
             "status": "error",
             "message": f"Missing sensor data: {missing_sensors}"
         }), 400
+    
+    # Validate sensor data types
+    invalid_sensors = [s for s in buffers if not isinstance(raw_data[s], (int, float))]
+    if invalid_sensors:
+        return jsonify({
+            "status": "error",
+            "message": f"Invalid value type for sensors: {invalid_sensors}"
+        }), 400
 
     try:
         # Convert raw sensor data into a DataFrame of features using rolling stats
@@ -152,13 +160,19 @@ def predict():
 
         # If the rolling buffer does not yet contain enough samples, skip prediction
         if X is None:
+            buffer_lengths = {s: len(buffers[s]) for s in buffers}
             return jsonify({
                 "status": "waiting",
-                "message": f"Need {BUFFER_SIZE} samples per sensor before predicting."
+                "message": f"Need {BUFFER_SIZE} samples per sensor before predicting.",
+                "buffer_lengths": buffer_lengths
             }), 200
 
         # Perform inference using the pre-loaded Random Forest model
         prediction = int(model.predict(X)[0])
+
+        # Log the input and prediction (optional but recommended for production)
+        app.logger.info(f"Raw input: {raw_data}")
+        app.logger.info(f"Prediction: {prediction}")
 
         # Return successful prediction
         return jsonify({
@@ -168,6 +182,7 @@ def predict():
 
     except Exception as e:
         # Catch unexpected errors (e.g., type errors, computation issues)
+        app.logger.error(f"Prediction error: {str(e)}", exc_info=True)
         return jsonify({
             "status": "error",
             "message": str(e)
