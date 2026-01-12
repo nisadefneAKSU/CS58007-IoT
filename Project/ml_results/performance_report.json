@@ -1,0 +1,199 @@
+{
+  "models": {
+    "Logistic Regression": {
+      "train_metrics": {
+        "accuracy": 0.9588550983899821,
+        "precision": 0.9624853458382181,
+        "recall": 0.9832335329341317,
+        "f1_score": 0.9727488151658767
+      },
+      "test_metrics": {
+        "accuracy": 0.9714285714285714,
+        "precision": 0.971830985915493,
+        "recall": 0.9904306220095693,
+        "f1_score": 0.981042654028436
+      },
+      "confusion_matrix": [
+        [
+          65,
+          6
+        ],
+        [
+          2,
+          207
+        ]
+      ]
+    },
+    "Random Forest": {
+      "train_metrics": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "test_metrics": {
+        "accuracy": 0.9892857142857143,
+        "precision": 0.9904761904761905,
+        "recall": 0.9952153110047847,
+        "f1_score": 0.9928400954653938
+      },
+      "confusion_matrix": [
+        [
+          69,
+          2
+        ],
+        [
+          1,
+          208
+        ]
+      ]
+    },
+    "KNN": {
+      "train_metrics": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "test_metrics": {
+        "accuracy": 0.9642857142857143,
+        "precision": 0.9671361502347418,
+        "recall": 0.9856459330143541,
+        "f1_score": 0.976303317535545
+      },
+      "confusion_matrix": [
+        [
+          64,
+          7
+        ],
+        [
+          3,
+          206
+        ]
+      ]
+    }
+  },
+  "sensor_combinations": {
+    "All sensors": {
+      "sensor_configuration": "All sensors",
+      "num_features": 23,
+      "accuracy": 0.9921316165951359,
+      "precision": 0.9942719752160434,
+      "recall": 0.9952107279693486,
+      "f1_score": 0.994735200823652
+    },
+    "No Temperature": {
+      "sensor_configuration": "No Temperature",
+      "num_features": 20,
+      "accuracy": 0.974964234620887,
+      "precision": 0.983694927814386,
+      "recall": 0.9827586206896551,
+      "f1_score": 0.983199071334707
+    },
+    "No Humidity": {
+      "sensor_configuration": "No Humidity",
+      "num_features": 21,
+      "accuracy": 0.9735336194563663,
+      "precision": 0.973743352747531,
+      "recall": 0.9913793103448277,
+      "f1_score": 0.9824611032531824
+    },
+    "No Light": {
+      "sensor_configuration": "No Light",
+      "num_features": 18,
+      "accuracy": 0.9878397711015737,
+      "precision": 0.9933248796447255,
+      "recall": 0.9904214559386973,
+      "f1_score": 0.991853271295445
+    },
+    "No CO2": {
+      "sensor_configuration": "No CO2",
+      "num_features": 18,
+      "accuracy": 0.9914163090128755,
+      "precision": 0.9961603012134663,
+      "recall": 0.9923371647509579,
+      "f1_score": 0.9942418300021872
+    },
+    "No PIR": {
+      "sensor_configuration": "No PIR",
+      "num_features": 19,
+      "accuracy": 0.9935622317596566,
+      "precision": 0.9961685507378016,
+      "recall": 0.9952107279693486,
+      "f1_score": 0.9956875819287182
+    },
+    "No Noise": {
+      "sensor_configuration": "No Noise",
+      "num_features": 20,
+      "accuracy": 0.986409155937053,
+      "precision": 0.9877360317589994,
+      "recall": 0.9942528735632185,
+      "f1_score": 0.9909485869051928
+    },
+    "No Time": {
+      "sensor_configuration": "No Time",
+      "num_features": 22,
+      "accuracy": 0.9907010014306152,
+      "precision": 0.9942500338073726,
+      "recall": 0.9932950191570882,
+      "f1_score": 0.9937691008308742
+    },
+    "Temperature + Humidity + Light": {
+      "sensor_configuration": "Temperature + Humidity + Light",
+      "num_features": 10,
+      "accuracy": 0.9799713876967097,
+      "precision": 0.9867989333888364,
+      "recall": 0.9865900383141762,
+      "f1_score": 0.9866246334412918
+    },
+    "Temperature + Humidity + PIR": {
+      "sensor_configuration": "Temperature + Humidity + PIR",
+      "num_features": 9,
+      "accuracy": 0.9706723891273247,
+      "precision": 0.9817581237871092,
+      "recall": 0.9789272030651341,
+      "f1_score": 0.9803243966334095
+    },
+    "Temperature + Humidity + Noise": {
+      "sensor_configuration": "Temperature + Humidity + Noise",
+      "num_features": 8,
+      "accuracy": 0.9878397711015737,
+      "precision": 0.9904598014814397,
+      "recall": 0.9932950191570882,
+      "f1_score": 0.9918740257077155
+    },
+    "Temperature + Light + Noise": {
+      "sensor_configuration": "Temperature + Light + Noise",
+      "num_features": 11,
+      "accuracy": 0.9756795422031473,
+      "precision": 0.977376669366106,
+      "recall": 0.9904214559386973,
+      "f1_score": 0.9838501543267751
+    },
+    "Temperature + Light + Time": {
+      "sensor_configuration": "Temperature + Light + Time",
+      "num_features": 9,
+      "accuracy": 0.9756795422031473,
+      "precision": 0.9785029316234904,
+      "recall": 0.9894636015325671,
+      "f1_score": 0.983864969776763
+    },
+    "Humidity + Light + Noise": {
+      "sensor_configuration": "Humidity + Light + Noise",
+      "num_features": 10,
+      "accuracy": 0.9735336194563663,
+      "precision": 0.982726188699095,
+      "recall": 0.981800766283525,
+      "f1_score": 0.9822357434748272
+    },
+    "Humidity + Light + Time": {
+      "sensor_configuration": "Humidity + Light + Time",
+      "num_features": 8,
+      "accuracy": 0.9706723891273247,
+      "precision": 0.9771751851300562,
+      "recall": 0.9837164750957855,
+      "f1_score": 0.9804318137905802
+    }
+  },
+  "best_model": "Random Forest"
+}
