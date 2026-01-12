@@ -381,6 +381,25 @@ class OccupancyMLTrainer:
         
         return report
     
+
+    def train_dummy_baseline_model(self,):
+        """returns baseline accuracy, preciseness, recall, and f1-score values"""
+        # Dummy Model
+        print("\nTraining Dummy Model...")
+        dum_model = DummyClassifier(strategy='most_frequent', random_state=42) # This model always predicts the most common/majority class label, in this case 1
+        dum_model.fit(self.X_train, self.y_train)
+        # self.models["Dummy Model"]=dum_model
+
+        y_pred_train = dum_model.predict(self.X_train)
+        y_pred_test = dum_model.predict(self.X_test)
+
+        test_acc = accuracy_score(self.y_test, y_pred_test)
+        test_prec = precision_score(self.y_test, y_pred_test)
+        test_rec = recall_score(self.y_test, y_pred_test)  # Calculate recall
+        test_f1 = f1_score(self.y_test, y_pred_test)  # Calculate F1-score
+
+        return test_acc, test_prec, test_rec, test_f1
+
     def visualize_results(self, best_model_name, best_model, output_dir='ml_results'):
         """Generate comprehensive visualizations""" 
         print(f"\nGenerating visualizations:") 
@@ -389,11 +408,13 @@ class OccupancyMLTrainer:
         
         # 1. Model comparison bar chart 
         fig, axes = plt.subplots(2, 2, figsize=(15, 12))
-        fig.suptitle('Model Performance Comparison', fontsize=16, fontweight='bold')
+        fig.suptitle('Figure 3. Model Performance Comparison', fontsize=16, fontweight='bold')
         
         metrics = ['accuracy', 'precision', 'recall', 'f1_score']  # Define list of metrics to visualize
         metric_names = ['Accuracy', 'Precision', 'Recall', 'F1-Score']  # Define display names for metrics
-        
+
+        baseline_accuracy, _, _, baseline_f1= self.train_dummy_baseline_model()
+
         for idx, (metric, name) in enumerate(zip(metrics, metric_names)): # Iterate through metrics and their display names with index
             ax = axes[idx // 2, idx % 2]  # Get subplot at position calculated from index (row, column)
             
@@ -405,7 +426,14 @@ class OccupancyMLTrainer:
             ax.set_title(f'{name} Comparison', fontsize=14, fontweight='bold')  # Set subplot title with metric name
             ax.set_ylim([0, 1.05])  # Set y-axis limits
             ax.grid(axis='y', alpha=0.3)  # Add horizontal grid lines with 30% transparency
-            
+
+            if metric=="accuracy": 
+                ax.axhline(y=baseline_accuracy, color="red", linestyle="--", linewidth=2, label="baseline")
+                ax.text(0.99, baseline_accuracy+0.01, f"baseline:{baseline_accuracy:.2f}", color="red", ha="right", va="bottom", transform=ax.get_yaxis_transform())
+            if metric=="f1_score": 
+                ax.axhline(y=baseline_f1, color="red", linestyle="--", linewidth=2, label="baseline")
+                ax.text(0.99, baseline_f1+0.01, f"baseline:{baseline_f1:.2f}", color="red", ha="right", va="bottom", transform=ax.get_yaxis_transform())
+
             # Add value labels on bars
             for bar in bars:  # Iterate through each bar in the chart
                 height = bar.get_height()  # Get the height (value) of the bar
@@ -418,7 +446,7 @@ class OccupancyMLTrainer:
         
         # 2. Confusion matrices
         fig, axes = plt.subplots(1, 3, figsize=(18, 5)) # Create subplots
-        fig.suptitle('Confusion Matrices', fontsize=16, fontweight='bold') # Add main title to the figure with bold formatting
+        fig.suptitle('Figure 4. Model Confusion Matrices', fontsize=16, fontweight='bold') # Add main title to the figure with bold formatting
         
         for idx, (model_name, results) in enumerate(self.results.items()): # Iterate through model results with index
             cm = results['confusion_matrix'] # Extract confusion matrix for current model
@@ -431,7 +459,7 @@ class OccupancyMLTrainer:
             axes[idx].set_title(model_name, fontsize=12, fontweight='bold') # Set subplot title with model name
             axes[idx].set_ylabel('True Label') # Set y-axis label indicating true class
             axes[idx].set_xlabel('Predicted Label') # Set x-axis label indicating predicted class
-        
+
         plt.tight_layout()
         plt.savefig(f'{output_dir}/confusion_matrices.png', dpi=300, bbox_inches='tight') 
         print(f"Saved confusion_matrices.png.")
@@ -449,14 +477,14 @@ class OccupancyMLTrainer:
             bars = ax.bar(combo_names, f1_scores, color=colors)  # Create bar chart with combination names and F1-scores
             
             ax.set_ylabel('F1-Score', fontsize=12)
-            ax.set_title('Sensor Combination Performance', fontsize=14, fontweight='bold') 
-            ax.set_ylim([0, 1.05])  # Set y-axis limits
+            ax.set_title('Figure 5. Sensor Combination Performance', fontsize=14, fontweight='bold') 
+            ax.set_ylim([0, 1.12])  # Set y-axis limits
             ax.grid(axis='y', alpha=0.3)  # Add horizontal grid lines with 30% transparency
-            plt.xticks(rotation=45, ha='right')
+            plt.xticks(rotation=25, ha='right', fontsize=14)
             
             # Add feature count labels 
             for bar, num_feat, f1 in zip(bars, num_features, f1_scores):  # Iterate through bars with their feature counts and F1-scores
-                ax.text(bar.get_x() + bar.get_width()/2., f1 + 0.02, f'F1: {f1:.3f}\n({num_feat} features)', ha='center', va='bottom', fontsize=9) 
+                ax.text(bar.get_x() + bar.get_width()/2., f1 + 0.02, f'F1: {f1:.3f}\n({num_feat} features)', ha='center', va='bottom', fontsize=12) 
             
             plt.tight_layout()
             plt.savefig(f'{output_dir}/sensor_combinations.png', dpi=300, bbox_inches='tight')
@@ -472,7 +500,7 @@ class OccupancyMLTrainer:
             top_features = importance_df.head(15)  # Get first 15 rows (top features) from importance dataframe
             ax.barh(top_features['feature'], top_features['importance'], color='#2ecc71') # Create horizontal bar chart
             ax.set_xlabel('Importance', fontsize=12) # Set x-axis label
-            ax.set_title(f'Top 15 Most Important Features ({best_model_name})', fontsize=14, fontweight='bold')
+            ax.set_title(f'Figure 2. Top 15 Most Important Features ({best_model_name})', fontsize=14, fontweight='bold')
             ax.invert_yaxis() # Invert y-axis so highest importance appears at top
             ax.grid(axis='x', alpha=0.3) # Add vertical grid lines with 30% transparency
 
@@ -483,18 +511,6 @@ class OccupancyMLTrainer:
             print(f"Saved feature_importance.png.")
             plt.close()
 
-def train_dummy_baseline_model(X_train, X_test, y_train, y_test):
-    # Dummy Model
-    print("\nTraining Dummy Model...")
-    dum_model = DummyClassifier(strategy='most_frequent', random_state=42) # This model always predicts the most common/majority class label, in this case 1
-    dum_model.fit(X_train, y_train)
-    # self.models["Dummy Model"]=dum_model
-
-    y_pred_train = dum_model.predict(X_train)
-    y_pred_test = dum_model.predict(X_test)
-    print(f"Dummy model is trained, for baseline perofrmance:\
-            \nTrain Accuracy -> {accuracy_score(y_train, y_pred_train):.4f} Test F1-Score -> {f1_score(y_train, y_pred_train):.4f}\
-            \nTest Accuracy -> {accuracy_score(y_test, y_pred_test):.4f} Test F1-Score -> {f1_score(y_test, y_pred_test):.4f}")
 
 ### Main execution
 if __name__ == "__main__":
@@ -509,7 +525,9 @@ if __name__ == "__main__":
     # Step 3: Hyperparameter tuning
     best_params = trainer.tune_hyperparameters(cv=5)
     # Step 4a: Obtain baseline parameters by training a dummy model that classifies all instances as the majority class
-    train_dummy_baseline_model(trainer.X_train, trainer.X_test, trainer.y_train, trainer.y_test)
+    test_acc, _, _, test_f1 = trainer.train_dummy_baseline_model()
+    print(f"Dummy model is trained, for baseline performance:\
+            \nTest Accuracy -> {test_acc:.4f} Test F1-Score -> {test_f1:.4f}")
     # Step 4: Train models using best parameters
     trainer.train_models(best_params=best_params)
     # Step 5: Evaluate models
