@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.dummy import DummyClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
@@ -59,6 +60,17 @@ class OccupancyMLTrainer:
     def train_models(self, best_params=None):
         """Train all ML models (optionally with tuned hyperparameters)"""
         print("\nTraining ML models:")
+
+        # Dummy Model
+        print("0-Training Dummy Model...")
+        dum_model = DummyClassifier(strategy='most_frequent', random_state=42) # This model always predicts the most common/majority class label, in this case 1
+        dum_model.fit(self.X_train, self.y_train)
+        self.models["Dummy Model"]=dum_model
+
+        y_pred_train = dum_model.predict(self.X_train)
+        y_pred_test = dum_model.predict(self.X_test)
+        print(f"Dummy model is trained, for baseline perofrmance.\
+              \nAccuracy -> {accuracy_score(self.y_test, y_pred_test)} F1-Score -> {f1_score(self.y_test, y_pred_test)}")
 
         # Logistic Regression
         print("1-Training Logistic Regression...")
@@ -118,7 +130,8 @@ class OccupancyMLTrainer:
                     n_jobs=-1
                 ),
                 'params': {
-                    'max_depth': [6, 8, 10],
+                    'max_depth': [6, 8, 10, 12],
+                    # 'n_estimators': [30, 50, 70],
                     'min_samples_split': [2, 5],
                     'min_samples_leaf': [1, 2]
                 }
@@ -427,7 +440,7 @@ class OccupancyMLTrainer:
         plt.close()
         
         # 2.Confusion matrices
-        fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+        fig, axes = plt.subplots(1, 4, figsize=(18, 4))
         fig.suptitle('Confusion Matrices', fontsize=16, fontweight='bold')
         
         for idx, (model_name, results) in enumerate(self.results.items()):
@@ -492,6 +505,8 @@ class OccupancyMLTrainer:
 
             plt.tight_layout()
             plt.savefig(f'{output_dir}/feature_importance.png', dpi=300, bbox_inches='tight')
+            total_importance = top_features['importance'].sum()
+            print(f"Sum of top 15 feature importances: {total_importance:.4f}")
             print(f"Saved feature_importance.png.")
             plt.close()
 

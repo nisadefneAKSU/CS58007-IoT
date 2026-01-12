@@ -1,5 +1,29 @@
 {
   "models": {
+    "Dummy Model": {
+      "train_metrics": {
+        "accuracy": 0.7827380952380952,
+        "precision": 0.7827380952380952,
+        "recall": 1.0,
+        "f1_score": 0.8781302170283807
+      },
+      "test_metrics": {
+        "accuracy": 0.7810650887573964,
+        "precision": 0.7810650887573964,
+        "recall": 1.0,
+        "f1_score": 0.8770764119601329
+      },
+      "confusion_matrix": [
+        [
+          0,
+          37
+        ],
+        [
+          0,
+          132
+        ]
+      ]
+    },
     "Logistic Regression": {
       "train_metrics": {
         "accuracy": 0.9583333333333334,
