@@ -82,24 +82,24 @@
       "num_features": 26
     },
     "Without CO2": {
-      "accuracy": 0.9822485207100592,
-      "precision": 0.9923664122137404,
+      "accuracy": 0.9763313609467456,
+      "precision": 0.9848484848484849,
       "recall": 0.9848484848484849,
-      "f1_score": 0.9885931558935361,
+      "f1_score": 0.9848484848484849,
       "num_features": 21
     },
     "Without light": {
       "accuracy": 0.9644970414201184,
-      "precision": 0.9772727272727273,
-      "recall": 0.9772727272727273,
-      "f1_score": 0.9772727272727273,
+      "precision": 0.9701492537313433,
+      "recall": 0.9848484848484849,
+      "f1_score": 0.9774436090225563,
       "num_features": 21
     },
     "Without microphone": {
-      "accuracy": 0.9763313609467456,
-      "precision": 0.9923076923076923,
+      "accuracy": 0.9585798816568047,
+      "precision": 0.9699248120300752,
       "recall": 0.9772727272727273,
-      "f1_score": 0.9847328244274809,
+      "f1_score": 0.9735849056603774,
       "num_features": 20
     },
     "Only motion (PIR)": {
@@ -110,10 +110,10 @@
       "num_features": 3
     },
     "CO2 + PIR only": {
-      "accuracy": 0.7988165680473372,
-      "precision": 0.8266666666666667,
-      "recall": 0.9393939393939394,
-      "f1_score": 0.8794326241134752,
+      "accuracy": 0.7928994082840237,
+      "precision": 0.8169934640522876,
+      "recall": 0.946969696969697,
+      "f1_score": 0.8771929824561403,
       "num_features": 8
     }
   },

@@ -118,7 +118,7 @@ class OccupancyMLTrainer:
                 ),  
                 'params': {  # Hyperparameter search space
                     'max_depth': [6, 8, 10, 12],  # Maximum depth of trees to try
-                    'n_estimators': [50, 100, 150],  # Tune number of trees
+                    'n_estimators': [20, 30, 40, 50],  # Tune number of trees
                     'min_samples_split': [2, 5],  # Minimum samples required to split node
                     'min_samples_leaf': [1, 2]  # Minimum samples required at leaf node
                 }  
