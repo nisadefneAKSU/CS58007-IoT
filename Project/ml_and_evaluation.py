@@ -77,7 +77,7 @@ class OccupancyMLTrainer:
         print("2-Training Random Forest...")
         rf_params = best_params.get('Random Forest', {}) if best_params else {}  # Get tuned parameters if available, otherwise use empty dict
         rf_model = RandomForestClassifier(
-            n_estimators=100,  # Set number of trees in the forest
+            #n_estimators=100,  # Set number of trees in the forest
             random_state=42,  # Set random seed for reproducibility
             n_jobs=-1,  # Use all available CPU cores for parallel processing
             **rf_params  # Unpack any additional tuned hyperparameters
@@ -113,13 +113,12 @@ class OccupancyMLTrainer:
             },
             'Random Forest': {
                 'model': RandomForestClassifier(  # Base model for tuning
-                    n_estimators=100,  # Number of trees in forest
                     random_state=42,  # Random seed for reproducibility
                     n_jobs=-1  # Use all CPU cores
                 ),  
                 'params': {  # Hyperparameter search space
                     'max_depth': [6, 8, 10, 12],  # Maximum depth of trees to try
-                    # 'n_estimators': [30, 50, 70],
+                    'n_estimators': [50, 100, 150],  # Tune number of trees
                     'min_samples_split': [2, 5],  # Minimum samples required to split node
                     'min_samples_leaf': [1, 2]  # Minimum samples required at leaf node
                 }  
@@ -141,8 +140,12 @@ class OccupancyMLTrainer:
             X_train_used = self.X_train  # Initialize training data (default to unscaled)
 
             if model_name in ['Logistic Regression', 'KNN']:  # Check if model requires scaled features
-                scaler = StandardScaler()  # Create new scaler instance
-                X_train_used = scaler.fit_transform(self.X_train)  # Scale training features
+                # Use the trainer's scaler if available, otherwise fit new
+                if self.scaler is None:
+                    self.scaler = StandardScaler()
+                    self.scaler.fit(self.X_train)
+                X_train_used = self.scaler.transform(self.X_train)
+
 
             grid = GridSearchCV(  # Create grid search cross-validator
                 estimator=config['model'],  # Set base model to tune
@@ -483,18 +486,31 @@ class OccupancyMLTrainer:
             print(f"Saved feature_importance.png.")
             plt.close()
 
-def train_dummy_baseline_model(X_train, X_test, y_train, y_test):
-    # Dummy Model
-    print("\nTraining Dummy Model...")
-    dum_model = DummyClassifier(strategy='most_frequent', random_state=42) # This model always predicts the most common/majority class label, in this case 1
-    dum_model.fit(X_train, y_train)
-    # self.models["Dummy Model"]=dum_model
+    def train_dummy_baseline_model(self, X_train, X_test, y_train, y_test):
+        '''This function creates a dummy model which serves as a baseline for model performance.'''
+        print("\nTraining dummy model for comparison...")
+        print("This baseline shows how well a 'majority-class-only' model performs for comparison.")
+        
+        # Initialize a DummyClassifier that always predicts the most frequent class
+        dum_model = DummyClassifier(strategy='most_frequent', random_state=42)
+        
+        # Fit the dummy model on the training data
+        # The model will learn the most frequent class from y_train
+        dum_model.fit(X_train, y_train)
 
-    y_pred_train = dum_model.predict(X_train)
-    y_pred_test = dum_model.predict(X_test)
-    print(f"Dummy model is trained, for baseline perofrmance:\
-            \nTrain Accuracy -> {accuracy_score(y_train, y_pred_train):.4f} Test F1-Score -> {f1_score(y_train, y_pred_train):.4f}\
-            \nTest Accuracy -> {accuracy_score(y_test, y_pred_test):.4f} Test F1-Score -> {f1_score(y_test, y_pred_test):.4f}")
+        # Generate predictions on the training set
+        y_pred_train = dum_model.predict(X_train)
+        
+        # Generate predictions on the test set
+        y_pred_test = dum_model.predict(X_test)
+        
+        # Print performance metrics for baseline evaluation
+        # This shows how well a "majority-class-only" model would perform
+        print(f"Dummy model is trained:")
+        print(f"Train Accuracy -> {accuracy_score(y_train, y_pred_train):.4f}")
+        print(f"Train F1-Score -> {f1_score(y_train, y_pred_train):.4f}")
+        print(f"Test Accuracy -> {accuracy_score(y_test, y_pred_test):.4f}")
+        print(f"Test F1-Score -> {f1_score(y_test, y_pred_test):.4f}")
 
 ### Main execution
 if __name__ == "__main__":
@@ -508,8 +524,8 @@ if __name__ == "__main__":
     trainer.scale_features()
     # Step 3: Hyperparameter tuning
     best_params = trainer.tune_hyperparameters(cv=5)
-    # Step 4a: Obtain baseline parameters by training a dummy model that classifies all instances as the majority class
-    train_dummy_baseline_model(trainer.X_train, trainer.X_test, trainer.y_train, trainer.y_test)
+    # Step 3.5: Obtain baseline parameters by training a dummy model that classifies all instances as the majority class
+    trainer.train_dummy_baseline_model(trainer.X_train, trainer.X_test, trainer.y_train, trainer.y_test)
     # Step 4: Train models using best parameters
     trainer.train_models(best_params=best_params)
     # Step 5: Evaluate models
