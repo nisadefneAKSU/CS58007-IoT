@@ -722,7 +722,6 @@ class OccupancyMLTrainer:
             print(f"Saved feature_importance.png.")
             plt.close()
 
-
 ### Main execution
 if __name__ == "__main__":
     print("Starting machine learning and evaluation...")
@@ -766,3 +765,4 @@ if __name__ == "__main__":
     
     print("\nML training and evaluation is done.\n")
     print(latex_table) # this is for producing a nice table later
+
