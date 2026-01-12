@@ -73,49 +73,6 @@
       ]
     }
   },
-  "sensor_combinations": {
-    "All sensors": {
-      "accuracy": 0.9892857142857143,
-      "precision": 0.9904761904761905,
-      "recall": 0.9952153110047847,
-      "f1_score": 0.9928400954653938,
-      "num_features": 23
-    },
-    "Without CO2": {
-      "accuracy": 0.9964285714285714,
-      "precision": 0.9952380952380953,
-      "recall": 1.0,
-      "f1_score": 0.9976133651551312,
-      "num_features": 18
-    },
-    "Without light": {
-      "accuracy": 0.9857142857142858,
-      "precision": 0.9812206572769953,
-      "recall": 1.0,
-      "f1_score": 0.990521327014218,
-      "num_features": 18
-    },
-    "Without microphone": {
-      "accuracy": 1.0,
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1_score": 1.0,
-      "num_features": 20
-    },
-    "Only motion (PIR)": {
-      "accuracy": 0.7464285714285714,
-      "precision": 0.7464285714285714,
-      "recall": 1.0,
-      "f1_score": 0.8548057259713702,
-      "num_features": 4
-    },
-    "CO2 + PIR only": {
-      "accuracy": 0.7464285714285714,
-      "precision": 0.7464285714285714,
-      "recall": 1.0,
-      "f1_score": 0.8548057259713702,
-      "num_features": 9
-    }
-  },
+  "sensor_combinations": {},
   "best_model": "Random Forest"
 }

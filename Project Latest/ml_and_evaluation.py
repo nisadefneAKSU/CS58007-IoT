@@ -1,3 +1,4 @@
+from itertools import combinations
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LogisticRegression
@@ -227,6 +228,136 @@ class OccupancyMLTrainer:
             'Noise': [c for c in self.X_train.columns if ('noise' in c.lower() or 'mic' in c.lower())], # Microphone, noise_mean, noise_variance, noise_std, noise_max, noise_min
             'Time': [c for c in self.X_train.columns if ('hour' in c.lower() or 'day' in c.lower())] # hour, day_of_week
         }
+
+    def run_cv_ablation(self, best_model_name, best_model, cv=5, max_combo_size=3, output_csv="local_ablation.csv"):
+        """
+        Run ablation study using cross-validation to avoid test set overfitting.
+        
+        Args:
+            best_model_name: Name of best model ('Random Forest', 'Logistic Regression', 'KNN')
+            best_model: Best hypertuned model
+            cv: Number of cross-validation folds
+            max_combo_size: Maximum number of sensor groups to combine (keep ≤3 to avoid combinatorial explosion)
+            output_csv: File name to which ablation dataframe is saved
+        
+        Returns:
+            DataFrame with ablation results sorted by CV F1-score
+        """
+        sensor_groups=self.get_sensor_feature_groups()
+
+        # Combine train and test for CV
+        X_combined = pd.concat([self.X_train, self.X_test], axis=0)
+        y_combined = pd.concat([self.y_train, self.y_test], axis=0)
+
+        experiments = {}
+
+        # 1. Baseline: All sensors
+        experiments['All sensors'] = list(X_combined.columns)
+
+        # 2. Single sensor exclusions (all but one sensor)
+        for sensor_name, features in sensor_groups.items():
+            remaining = [c for c in X_combined.columns if c not in features]
+            if remaining:  # Only if features remain
+                experiments[f'No {sensor_name}'] = remaining
+
+        # 3. Include single sensor only
+        for sensor_name, features in sensor_groups.items():
+            if features:  # Only if sensor has features
+                experiments[f'Only {sensor_name}'] = features
+
+        # 4. Pairwise combinations (2 sensors together)
+        sensor_names = list(sensor_groups.keys())
+        for s1, s2 in combinations(sensor_names, 2):
+            combo_features = sensor_groups[s1] + sensor_groups[s2]
+            if combo_features: # Only if sensors havve features
+                experiments[f'{s1} + {s2}'] = combo_features
+
+        # 5. Triple combinations - comment out if too slow
+        if max_combo_size >= 3:
+            for s1, s2, s3 in combinations(sensor_names, 3):
+                combo_features = sensor_groups[s1] + sensor_groups[s2] + sensor_groups[s3]
+                if combo_features:
+                    experiments[f'{s1} + {s2} + {s3}'] = combo_features
+
+        skf = StratifiedKFold(n_splits=cv, shuffle=True, random_state=42)
+
+        base_model=clone(best_model)
+        needs_scaling = best_model_name in ['Logistic Regression', 'KNN']
+
+        results = []
+        print(f"\nRunning CV ablation study with {best_model_name} ({cv} folds)...")
+        print(f"Total experiments: {len(experiments)}")
+        print("-" * 80)
+
+        for i, (combo_name, features) in enumerate(experiments.items(), 1):
+            if not features:
+                continue
+            
+            X_subset = X_combined[features]
+
+            cv_scores = {'accuracy': [], 'precision': [], 'recall': [], 'f1': []}
+
+            for train_idx, val_idx in skf.split(X_subset, y_combined):
+                X_train_fold = X_subset.iloc[train_idx]
+                X_val_fold = X_subset.iloc[val_idx]
+                y_train_fold = y_combined.iloc[train_idx]
+                y_val_fold = y_combined.iloc[val_idx]
+                
+                # Scale inside fold if needed
+                if needs_scaling:
+                    scaler = StandardScaler()
+                    X_train_fold = scaler.fit_transform(X_train_fold)
+                    X_val_fold = scaler.transform(X_val_fold)
+                
+                model = clone(base_model)
+                model.fit(X_train_fold, y_train_fold)
+                y_pred = model.predict(X_val_fold)
+                
+                # Store metrics in a dictionary
+                cv_scores={}
+                cv_scores['sensor_configuration']= combo_name
+                cv_scores['num_features']= len(features)
+                cv_scores['accuracy']=accuracy_score(y_val_fold, y_pred)
+                cv_scores['precision']=precision_score(y_val_fold, y_pred, zero_division=0)
+                cv_scores['recall']=recall_score(y_val_fold, y_pred, zero_division=0)
+                cv_scores['f1_score']=f1_score(y_val_fold, y_pred, zero_division=0)
+
+            metrics = {
+                'sensor_configuration': combo_name,
+                'num_features': len(features),
+                'accuracy': np.mean(cv_scores['accuracy']),
+                # 'cv_accuracy_std': np.std(cv_scores['accuracy']),
+                'precision': np.mean(cv_scores['precision']),
+                # 'cv_precision_std': np.std(cv_scores['precision']),
+                'recall': np.mean(cv_scores['recall']),
+                # 'cv_recall_std': np.std(cv_scores['recall']),
+                'f1_score': np.mean(cv_scores['f1_score']),
+                # 'cv_f1_std': np.std(cv_scores['f1_score'])
+            }
+            self.sensor_combinations[combo_name]=metrics  # Store metrics for this combination
+            results.append(metrics)
+
+            if i % 10 == 0 or i == len(experiments): # updating user on status of runs
+                print(f"Completed {i}/{len(experiments)} experiments...")
+        
+        df = pd.DataFrame(results)
+        df = df.sort_values('f1_score', ascending=False).reset_index(drop=True).head(15)
+        to_pop=[]
+        for key in self.sensor_combinations:
+            if key not in df["sensor_configuration"]:
+                to_pop.append(key)
+        for i in range(len(to_pop)):
+            self.sensor_combinations.pop(to_pop[i])
+        
+        print("\n" + "=" * 80)
+        print("Top 10 Sensor Combinations (by CV F1-Score):")
+        print("=" * 80)
+        print(df.head(10).to_string(index=False))
+
+        df.to_csv(output_csv, index=False)
+        print(f"Saved ablation results to {output_csv}")
+
+        return df
 
     def run_sensor_ablation(self, best_model_name, best_model, output_csv):
         """Compare model performance with different sensor exclusion combinations"""
@@ -616,8 +747,8 @@ if __name__ == "__main__":
     best_model_name, best_model = trainer.select_best_model()
     # Step 7: Compare sensor combinations with best model
     # trainer.compare_sensor_combinations(best_model_name, best_model)
-    df=trainer.run_sensor_ablation(best_model_name, best_model, "ablation1.csv")
-    latex_table = df.to_latex(
+    df=trainer.run_cv_ablation(best_model_name, best_model, cv=3, max_combo_size=3, output_csv="ablation2.csv")
+    latex_table = df.head(15).to_latex(
         index=False,
         float_format="%.4f",
         column_format="lccccc",
@@ -634,4 +765,4 @@ if __name__ == "__main__":
     trainer.visualize_results(best_model_name, best_model, output_dir='ml_results')
     
     print("\nML training and evaluation is done.\n")
-    # print(latex_table) # this is for producing a nice table later
+    print(latex_table) # this is for producing a nice table later
