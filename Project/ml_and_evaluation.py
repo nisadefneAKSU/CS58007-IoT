@@ -77,7 +77,7 @@ class OccupancyMLTrainer:
         print("2-Training Random Forest...")
         rf_params = best_params.get('Random Forest', {}) if best_params else {}  # Get tuned parameters if available, otherwise use empty dict
         rf_model = RandomForestClassifier(
-            n_estimators=100,  # Set number of trees in the forest
+            #n_estimators=100,  # Set number of trees in the forest
             random_state=42,  # Set random seed for reproducibility
             n_jobs=-1,  # Use all available CPU cores for parallel processing
             **rf_params  # Unpack any additional tuned hyperparameters
@@ -113,13 +113,12 @@ class OccupancyMLTrainer:
             },
             'Random Forest': {
                 'model': RandomForestClassifier(  # Base model for tuning
-                    n_estimators=100,  # Number of trees in forest
                     random_state=42,  # Random seed for reproducibility
                     n_jobs=-1  # Use all CPU cores
                 ),  
                 'params': {  # Hyperparameter search space
                     'max_depth': [6, 8, 10, 12],  # Maximum depth of trees to try
-                    # 'n_estimators': [30, 50, 70],
+                    'n_estimators': [50, 100, 150],  # Tune number of trees
                     'min_samples_split': [2, 5],  # Minimum samples required to split node
                     'min_samples_leaf': [1, 2]  # Minimum samples required at leaf node
                 }  
@@ -141,8 +140,12 @@ class OccupancyMLTrainer:
             X_train_used = self.X_train  # Initialize training data (default to unscaled)
 
             if model_name in ['Logistic Regression', 'KNN']:  # Check if model requires scaled features
-                scaler = StandardScaler()  # Create new scaler instance
-                X_train_used = scaler.fit_transform(self.X_train)  # Scale training features
+                # Use the trainer's scaler if available, otherwise fit new
+                if self.scaler is None:
+                    self.scaler = StandardScaler()
+                    self.scaler.fit(self.X_train)
+                X_train_used = self.scaler.transform(self.X_train)
+
 
             grid = GridSearchCV(  # Create grid search cross-validator
                 estimator=config['model'],  # Set base model to tune
