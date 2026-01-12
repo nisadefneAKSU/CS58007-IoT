@@ -614,6 +614,15 @@ if __name__ == "__main__":
     best_model_name, best_model = trainer.select_best_model()
     # Step 7: Run ablation study
     df=trainer.run_cv_ablation(best_model_name, best_model, cv=3, max_combo_size=3, output_csv="ablation2.csv")
+    latex_table = df.head(15).to_latex(
+        index=False,
+        float_format="%.4f",
+        column_format="lccccc",
+        caption="Sensor Ablation Study Using Fixed Random Forest Model",
+        label="tab:sensor_ablation",
+        bold_rows=False,
+        longtable=False
+    )
     # Step 8: Save models
     trainer.save_models(output_dir='trained_models')
     # Step 9: Generate performance report
@@ -622,3 +631,4 @@ if __name__ == "__main__":
     trainer.visualize_results(best_model_name, best_model, output_dir='ml_results')
     
     print("\nML training and evaluation is done.\n")
+    print(latex_table) # this is for producing a nice table later
