@@ -217,6 +217,83 @@ class OccupancyMLTrainer:
         
         return self.results
 
+    def get_sensor_feature_groups(self):
+        return {
+            'Temperature': [c for c in self.X_train.columns if 'temp' in c.lower()], # Temperature, temp_mean, temp_delta
+            'Humidity': [c for c in self.X_train.columns if 'humidity' in c.lower()], # Humidity, humidity_mean
+            'Light': [c for c in self.X_train.columns if 'light' in c.lower()], # Light, light_mean, light_variance, light_std, light_detla
+            'CO2': [c for c in self.X_train.columns if 'co2' in c.lower()], # CO2, co2_mean, co2_delta, co2_delta_mean, co2_variance
+            'PIR': [c for c in self.X_train.columns if 'pir' in c.lower()], # PIR, pir_sum, pir_max
+            'Noise': [c for c in self.X_train.columns if ('noise' in c.lower() or 'mic' in c.lower())], # Microphone, noise_mean, noise_variance, noise_std, noise_max, noise_min
+            'Time': [c for c in self.X_train.columns if ('hour' in c.lower() or 'day' in c.lower())] # hour, day_of_week
+        }
+
+    def run_sensor_ablation(self, best_model_name, best_model, output_csv):
+        """Compare model performance with different sensor exclusion combinations"""
+
+        sensor_groups = self.get_sensor_feature_groups()
+        experiments={
+            'All sensors': list(self.X_train.columns),  # Use all available features
+            
+            'No Temperature': [c for c in self.X_train.columns if c not in sensor_groups['Temperature']],
+            'No Humidity': [c for c in self.X_train.columns if c not in sensor_groups['Humidity']],
+            'No Light': [c for c in self.X_train.columns if c not in sensor_groups['Light']],
+            'No CO2': [c for c in self.X_train.columns if c not in sensor_groups['CO2']],
+            'No PIR': [c for c in self.X_train.columns if c not in sensor_groups['PIR']],
+            'No Noise': [c for c  in self.X_train.columns if c not in sensor_groups['Noise']],
+            'No Time': [c for c in self.X_train.columns if c not in sensor_groups['Time']],
+
+            'Only Temperature': [c for c in self.X_train.columns if c in sensor_groups['Temperature']],
+            'Only Humidity': [c for c in self.X_train.columns if c in sensor_groups['Humidity']],
+            'Only Light': [c for c in self.X_train.columns if c in sensor_groups['Light']],
+            'Only CO2': [c for c in self.X_train.columns if c in sensor_groups['CO2']],
+            'Only PIR': [c for c in self.X_train.columns if c in sensor_groups['PIR']],
+            'Only Noise': [c for c  in self.X_train.columns if c in sensor_groups['Noise']],
+            'Only Time': [c for c in self.X_train.columns if c  in sensor_groups['Time']],
+        }
+
+        results=[]
+        print(f"\nTesting different sensor combinations for {best_model_name}:")
+
+        for combo_name, features in experiments.items():
+            if not features:  # Check if feature list is empty
+                continue  # Skip this combination if no features
+
+            print(f"Testing: {combo_name} ({len(features)} features)")
+
+            X_train_subset = self.X_train[features]  # Select subset of training features
+            X_test_subset = self.X_test[features]  # Select subset of test features
+
+            # Clone model so original best_model is untouched
+            model = clone(best_model)
+
+            if best_model_name in ['Logistic Regression', 'KNN']:  # Check if model requires scaled features
+                scaler = StandardScaler()  # Create new scaler instance
+                X_train_subset = scaler.fit_transform(X_train_subset)  # Fit and transform training subset
+                X_test_subset = scaler.transform(X_test_subset)  # Transform test subset
+
+            model.fit(X_train_subset, self.y_train)  # Train cloned model on feature subset
+            y_pred = model.predict(X_test_subset)  # Predict on test subset
+
+            metrics = {  # Create dictionary of metrics for this combination
+                'sensor_configuration': combo_name,
+                'num_features': len(features),  # Store number of features used
+                'accuracy': accuracy_score(self.y_test, y_pred),  # Calculate accuracy
+                'precision': precision_score(self.y_test, y_pred),  # Calculate precision
+                'recall': recall_score(self.y_test, y_pred),  # Calculate recall
+                'f1_score': f1_score(self.y_test, y_pred)  # Calculate F1-score
+            }
+
+            self.sensor_combinations[combo_name] = metrics  # Store metrics for this combination
+            results.append(metrics)
+
+            print(f"Name: {combo_name:15s} -> Accuracy: {metrics['accuracy']:.4f} | F1: {metrics['f1_score']:.4f}") 
+
+        df=pd.DataFrame(results)
+        df.to_csv(output_csv, index=False)
+        print(f"Saved ablation results to {output_csv}")
+        return df # self.sensor_combinations
+
     def compare_sensor_combinations(self, best_model_name, best_model): 
         """Compare model performance with different sensor combinations""" 
 
@@ -538,7 +615,17 @@ if __name__ == "__main__":
     # Step 6: Select best model
     best_model_name, best_model = trainer.select_best_model()
     # Step 7: Compare sensor combinations with best model
-    trainer.compare_sensor_combinations(best_model_name, best_model)
+    # trainer.compare_sensor_combinations(best_model_name, best_model)
+    df=trainer.run_sensor_ablation(best_model_name, best_model, "ablation1.csv")
+    latex_table = df.to_latex(
+        index=False,
+        float_format="%.4f",
+        column_format="lccccc",
+        caption="Sensor Ablation Study Using Fixed Random Forest Model",
+        label="tab:sensor_ablation",
+        bold_rows=False,
+        longtable=False
+    )
     # Step 8: Save models
     trainer.save_models(output_dir='trained_models')
     # Step 9: Generate performance report
@@ -546,4 +633,5 @@ if __name__ == "__main__":
     # Step 10: Generate visualizations
     trainer.visualize_results(best_model_name, best_model, output_dir='ml_results')
     
-    print("\nML training and evaluation is done.")
+    print("\nML training and evaluation is done.\n")
+    # print(latex_table) # this is for producing a nice table later
