@@ -2,10 +2,12 @@
 
 This stage handles data preprocessing, feature engineering, model training, and evaluation. Trained models are exported as binary files for later deployment on edge devices.
 
+## Data Processing Environment
+
 ### 1. Install dependencies
 
 ```
-pip install -r server-requirements.txt
+pip install -r requirements.txt
 ```
 
 
@@ -47,7 +49,13 @@ This script performs local feature extraction, runs occupancy inference using th
 
 ## Server (Web Application)
 
-### 1. Start the server
+### 1. Install dependencies
+
+```
+pip install -r server-requirements.txt
+```
+
+### 2. Start the server
 
 ```
 python main.py
